@@ -2,6 +2,7 @@ logs/queries
 bin/
 web/
 frontend/dist/
+frontend/public/data/
 frontend/node_modules/
 .bruin.yml
 *.db

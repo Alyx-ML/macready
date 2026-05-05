@@ -3,7 +3,7 @@ import { ScrollShadow } from "@heroui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Game, MacNewsCategory, MacNewsItem } from "../types/gamedb";
-import { listGames, getDistinctValues, createGame, getMe, getMacNews, getAppStoreDetails } from "../api/gamedb";
+import { listGames, getDistinctValues, createGame, getMe, getMacNews, getAppStoreDetails, getSteamTrending, searchSteamCatalog, isStaticDataMode, type SteamCatalogItem } from "../api/gamedb";
 import { FloatingAgentChat } from "./FloatingAgentChat";
 import { LoadingCards, GameCard, NotRatedBadge, TierBadge } from "./gamedb/GameCards";
 import { GameDetailView } from "./gamedb/GameDetailView";
@@ -13,20 +13,6 @@ import { TopNavbar } from "./gamedb/TopNavbar";
 import { LiquidGlass } from "./gamedb/LiquidGlass";
 import { getTierConfig, NEW_TIERS } from "./gamedb/tierConfig";
 import { Apple, Gamepad2, ListOrdered, ScrollText, ShoppingBag, Star, type LucideIcon } from "lucide-react";
-
-type SteamCatalogItem = {
-  name: string;
-  steam_app_id: string;
-  cover_art_url: string;
-  description?: string;
-  genres?: string[];
-  mac_native?: boolean;
-  crossover_playable?: boolean;
-  compatibility_tier?: string;
-  compatibility_label?: string;
-  compatibility_reasons?: string[];
-  feed?: "featured" | "top_sellers" | "new_releases";
-};
 
 type MainView = "home" | "compatibility";
 
@@ -239,17 +225,9 @@ export function GameDB() {
   }, []);
 
   useEffect(() => {
-    fetch(`/api/v1/gamedb/steam/trending`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error("API error");
-        const contentType = res.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) throw new Error("Not JSON");
-        return res.json();
-      })
-      .then(data => {
-        if (data.items) {
-          setTrendingSteam((data.items || []).filter((item: SteamCatalogItem) => hasSteamCover(item) && !isAdultSteamItem(item) && !isNonGameSteamItem(item)));
-        }
+    getSteamTrending()
+      .then((items) => {
+        setTrendingSteam(items.filter((item: SteamCatalogItem) => hasSteamCover(item) && !isAdultSteamItem(item) && !isNonGameSteamItem(item)));
       })
       .catch(err => console.error("Failed to fetch trending:", err));
   }, []);
@@ -258,22 +236,19 @@ export function GameDB() {
     if (!search.trim()) { setSteamResults([]); return; }
     const timer = setTimeout(() => {
       setSteamLoading(true);
-      const params = new URLSearchParams({ q: search });
-      if (statusFilter) params.set("status", statusFilter);
-      fetch(`/api/v1/gamedb/steam/search?${params.toString()}`)
-        .then(async (res) => {
-          if (!res.ok) throw new Error("API error");
-          const contentType = res.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) throw new Error("Not JSON");
-          return res.json();
-        })
-        .then(data => { setSteamResults((data.items || []).filter((item: SteamCatalogItem) => hasSteamCover(item) && !isAdultSteamItem(item) && !isNonGameSteamItem(item))); setSteamLoading(false); })
+      searchSteamCatalog({ q: search, status: statusFilter || undefined })
+        .then(items => { setSteamResults(items.filter((item: SteamCatalogItem) => hasSteamCover(item) && !isAdultSteamItem(item) && !isNonGameSteamItem(item))); setSteamLoading(false); })
         .catch(err => { console.error("Failed to fetch search:", err); setSteamLoading(false); });
     }, 400);
     return () => clearTimeout(timer);
   }, [search, statusFilter]);
 
   const handleAddSteamGame = async (item: SteamCatalogItem) => {
+    if (isStaticDataMode) {
+      const existing = (games || []).find(g => g.steam_app_id === item.steam_app_id || g.name === item.name);
+      if (existing) runPageCrossfade(() => setDetailId(existing.id));
+      return;
+    }
     setAddingSteamId(item.steam_app_id);
     try {
       const res = await createGame({
