@@ -1488,9 +1488,14 @@ function ArticleBodyScroll({ paragraphs, compact = false }: { paragraphs: string
           scrollbarGutter: "stable",
         }}
       >
-        <div className="space-y-5">
+        <div className={compact ? "space-y-3" : "space-y-5"}>
           {paragraphs.map((paragraph, index) => (
-            <p key={`${paragraph.slice(0, 28)}-${index}`} className={compact ? "text-[15px] leading-7 text-white/62" : "text-[16px] leading-8 text-white/62"}>
+            <p
+              key={`${paragraph.slice(0, 28)}-${index}`}
+              className={compact
+                ? "relative pl-5 text-[15px] leading-7 text-white/62 before:absolute before:left-0 before:top-[0.72em] before:size-1.5 before:rounded-full before:bg-white/70"
+                : "text-[16px] leading-8 text-white/62"}
+            >
               {paragraph}
             </p>
           ))}
@@ -1724,13 +1729,21 @@ function CrossoverChangelogPanel({
         </aside>
 
         <div className="relative min-w-0 px-4 pb-5 md:px-6 lg:px-0 lg:py-6 lg:pr-6">
-          <img
-            src={`${import.meta.env.BASE_URL}imgs/crossover-icon.webp`}
-            alt=""
-            className="pointer-events-none absolute bottom-10 right-10 z-[1] hidden w-[190px] opacity-[0.055] mix-blend-screen md:block lg:right-14"
-            loading="lazy"
-            decoding="async"
-          />
+          <div
+            className="pointer-events-none absolute bottom-0 right-0 z-[1] hidden size-[360px] items-end justify-end overflow-hidden md:flex lg:size-[430px]"
+            style={{
+              maskImage: "radial-gradient(circle at 58% 58%, black 0%, black 34%, transparent 72%)",
+              WebkitMaskImage: "radial-gradient(circle at 58% 58%, black 0%, black 34%, transparent 72%)",
+            }}
+          >
+            <img
+              src={`${import.meta.env.BASE_URL}imgs/crossover-icon.webp`}
+              alt=""
+              className="w-[300px] translate-x-8 translate-y-6 opacity-[0.11] mix-blend-screen lg:w-[370px]"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
           <div
             className="release-notes-scroll relative z-10 max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
             style={{
