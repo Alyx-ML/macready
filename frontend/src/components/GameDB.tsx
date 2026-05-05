@@ -689,16 +689,14 @@ function GameListView({
           {search !== "" && steamResults.length > 0 && (
             <div>
               <h3 className="text-[15px] font-semibold text-white tracking-tight mb-4 px-1">Steam Catalog</h3>
-              <CardSilkField>
-                <div className="relative z-10">
-                  <SteamGameGrid
-                    games={steamResults}
-                    addingSteamId={addingSteamId}
-                    onSelect={onAddSteamGame}
-                    onOpenDetail={onOpenDetail}
-                  />
-                </div>
-              </CardSilkField>
+              <SearchResultsPanel>
+                <SteamGameGrid
+                  games={steamResults}
+                  addingSteamId={addingSteamId}
+                  onSelect={onAddSteamGame}
+                  onOpenDetail={onOpenDetail}
+                />
+              </SearchResultsPanel>
             </div>
           )}
 
@@ -726,6 +724,15 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
       {label}
       <button type="button" aria-label="Clear filter" onClick={onClear} className="text-white/20 hover:text-white ml-0.5 transition-colors">×</button>
     </span>
+  );
+}
+
+function SearchResultsPanel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative rounded-[20px] border border-white/[0.055] bg-black/[0.34] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_20px_70px_rgba(0,0,0,0.32)] sm:px-6 sm:py-6">
+      <div className="pointer-events-none absolute inset-0 rounded-[20px] bg-[linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0)_22%)]" />
+      <div className="relative z-10">{children}</div>
+    </div>
   );
 }
 
