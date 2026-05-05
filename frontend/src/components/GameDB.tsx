@@ -1348,12 +1348,12 @@ function MacOSReleaseNotesPanel({
               {article.summary}
             </p>
           )}
-          <dl className="mt-8 grid grid-cols-2 gap-3 text-[12px]">
-            <div className="rounded-[14px] bg-white/[0.035] p-4 ring-1 ring-white/[0.045]">
+          <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
+            <div>
               <dt className="text-white/34">System</dt>
               <dd className="mt-1 font-medium text-white/78">{osName}</dd>
             </div>
-            <div className="rounded-[14px] bg-white/[0.035] p-4 ring-1 ring-white/[0.045]">
+            <div>
               <dt className="text-white/34">Version</dt>
               <dd className="mt-1 font-medium text-white/78">{version}</dd>
             </div>
@@ -1369,10 +1369,16 @@ function MacOSReleaseNotesPanel({
         </aside>
 
         <div className="relative min-w-0 px-4 pb-5 md:px-6 lg:px-0 lg:py-6 lg:pr-6">
-          <ScrollShadow className="max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 ring-1 ring-white/[0.055] md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]">
+          <div
+            className="release-notes-scroll max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 ring-1 ring-white/[0.055] md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
+            style={{
+              WebkitOverflowScrolling: "touch",
+              overscrollBehavior: "contain",
+              scrollbarGutter: "stable",
+            }}
+          >
             <div className="relative">
-              <div className="pointer-events-none sticky top-[-32px] z-10 -mx-8 h-24 bg-gradient-to-b from-[#030303] via-[#030303]/92 to-transparent" />
-              <div className="-mt-16 space-y-10">
+              <div className="space-y-10">
                 {sections.map((section, sectionIndex) => (
                   <section
                     key={`${section.title}-${sectionIndex}`}
@@ -1408,7 +1414,9 @@ function MacOSReleaseNotesPanel({
                 ))}
               </div>
             </div>
-          </ScrollShadow>
+          </div>
+          <div className="pointer-events-none absolute inset-x-4 top-0 h-20 rounded-t-[24px] bg-gradient-to-b from-[#030303] via-[#030303]/70 to-transparent md:inset-x-6 lg:left-0 lg:right-6 lg:top-6" />
+          <div className="pointer-events-none absolute inset-x-4 bottom-5 h-20 rounded-b-[24px] bg-gradient-to-t from-[#030303] via-[#030303]/70 to-transparent md:inset-x-6 lg:left-0 lg:right-6 lg:bottom-6" />
         </div>
       </div>
     </section>
