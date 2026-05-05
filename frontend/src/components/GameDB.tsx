@@ -1846,7 +1846,9 @@ function AppStoreArticleReader({
   const releaseNoteParagraphs = formatArticleParagraphs(releaseNotes);
   const hasBriefReleaseNotes = releaseNoteParagraphs.length === 1 && releaseNoteParagraphs[0].length < 180;
   const screenshotTrackRef = useRef<HTMLDivElement>(null);
+  const screenshotDragRef = useRef({ active: false, startX: 0, scrollLeft: 0 });
   const [activeScreenshotIndex, setActiveScreenshotIndex] = useState(0);
+  const [isScreenshotDragging, setIsScreenshotDragging] = useState(false);
   const goToScreenshot = useCallback((index: number) => {
     const nextIndex = Math.max(0, Math.min(index, screenshots.length - 1));
     const track = screenshotTrackRef.current;
@@ -1879,6 +1881,48 @@ function AppStoreArticleReader({
 
     setActiveScreenshotIndex((currentIndex) => currentIndex === closestIndex ? currentIndex : closestIndex);
   }, []);
+  const handleScreenshotPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const track = screenshotTrackRef.current;
+
+    if (!track || event.button !== 0) {
+      return;
+    }
+
+    screenshotDragRef.current = {
+      active: true,
+      startX: event.clientX,
+      scrollLeft: track.scrollLeft,
+    };
+    setIsScreenshotDragging(true);
+    track.setPointerCapture(event.pointerId);
+  }, []);
+  const handleScreenshotPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const track = screenshotTrackRef.current;
+    const drag = screenshotDragRef.current;
+
+    if (!track || !drag.active) {
+      return;
+    }
+
+    event.preventDefault();
+    track.scrollLeft = drag.scrollLeft - (event.clientX - drag.startX);
+  }, []);
+  const endScreenshotDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const track = screenshotTrackRef.current;
+
+    if (!screenshotDragRef.current.active) {
+      return;
+    }
+
+    screenshotDragRef.current.active = false;
+    setIsScreenshotDragging(false);
+
+    if (track?.hasPointerCapture(event.pointerId)) {
+      track.releasePointerCapture(event.pointerId);
+    }
+
+    requestAnimationFrame(handleScreenshotScroll);
+  }, [handleScreenshotScroll]);
 
   const summaryRows = [
     formattedPrice ? ["Price", formattedPrice] : null,
@@ -1995,7 +2039,14 @@ function AppStoreArticleReader({
                   <div
                     ref={screenshotTrackRef}
                     onScroll={handleScreenshotScroll}
-                    className="-mx-2 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-2 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    onPointerDown={handleScreenshotPointerDown}
+                    onPointerMove={handleScreenshotPointerMove}
+                    onPointerUp={endScreenshotDrag}
+                    onPointerCancel={endScreenshotDrag}
+                    className={[
+                      "-mx-2 mt-4 flex gap-4 overflow-x-auto px-2 pb-4 [scrollbar-width:none] [touch-action:pan-y] [&::-webkit-scrollbar]:hidden",
+                      isScreenshotDragging ? "cursor-grabbing snap-none select-none" : "cursor-grab snap-x snap-mandatory",
+                    ].join(" ")}
                   >
                     {screenshots.map((src) => (
                       <div
@@ -2007,6 +2058,7 @@ function AppStoreArticleReader({
                           alt=""
                           loading="lazy"
                           decoding="async"
+                          draggable={false}
                           className="aspect-[16/10] w-full object-cover opacity-90"
                         />
                       </div>
