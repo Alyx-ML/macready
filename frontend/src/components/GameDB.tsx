@@ -1871,17 +1871,6 @@ function AppStoreArticleReader({
             </div>
           </div>
 
-          {summaryRows.length > 0 && (
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {summaryRows.map(([label, value]) => (
-                <div key={label} className="rounded-[16px] bg-white/[0.025] px-4 py-3 ring-1 ring-white/[0.045]">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-white/28">{label}</p>
-                  <p className="mt-1 truncate text-[14px] text-white/76">{value}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
           {article.summary && (
             <p className="mt-8 max-w-[760px] text-[16px] leading-8 text-white/62">
               {article.summary}
