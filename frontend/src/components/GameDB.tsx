@@ -135,7 +135,7 @@ function cleanArticleText(value: string) {
     .trim();
 }
 
-function formatCrossoverArticleParagraphs(value: string) {
+function formatArticleParagraphs(value: string) {
   const cleaned = cleanArticleText(value);
 
   if (!cleaned) {
@@ -1390,6 +1390,7 @@ function ArticleReader({
   formatDate: (value?: string) => string;
 }) {
   const body = article.content ?? "";
+  const paragraphs = formatArticleParagraphs(body);
   const categoryLabel = NEWS_CATEGORY_LABELS[article.category];
 
   if (article.category === "App Store" && article.source === "Apple App Store") {
@@ -1437,11 +1438,7 @@ function ArticleReader({
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.04] tracking-tight text-white md:text-[48px]">
             {article.title}
           </h1>
-          {body && (
-            <p className="mt-6 whitespace-pre-line text-[16px] leading-8 text-white/62">
-              {body}
-            </p>
-          )}
+          {paragraphs.length > 0 && <ArticleBodyScroll paragraphs={paragraphs} />}
           <a
             href={article.url}
             target="_blank"
@@ -1456,6 +1453,31 @@ function ArticleReader({
   );
 }
 
+function ArticleBodyScroll({ paragraphs }: { paragraphs: string[] }) {
+  return (
+    <div className="relative mt-6">
+      <div
+        className="release-notes-scroll max-h-[min(620px,calc(100vh-180px))] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+          scrollbarGutter: "stable",
+        }}
+      >
+        <div className="space-y-5">
+          {paragraphs.map((paragraph, index) => (
+            <p key={`${paragraph.slice(0, 28)}-${index}`} className="text-[16px] leading-8 text-white/62">
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-[24px] bg-gradient-to-b from-[#030303] via-[#030303]/70 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[24px] bg-gradient-to-t from-[#030303] via-[#030303]/70 to-transparent" />
+    </div>
+  );
+}
+
 function CrossoverBlogArticleReader({
   article,
   onBack,
@@ -1466,7 +1488,7 @@ function CrossoverBlogArticleReader({
   formatDate: (value?: string) => string;
 }) {
   const body = article.content || article.summary || "";
-  const paragraphs = formatCrossoverArticleParagraphs(body);
+  const paragraphs = formatArticleParagraphs(body);
   const heroImage = article.image_url || `${import.meta.env.BASE_URL}imgs/crossover-icon.webp`;
 
   return (
@@ -1488,28 +1510,7 @@ function CrossoverBlogArticleReader({
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.04] tracking-tight text-white md:text-[48px]">
             {article.title}
           </h1>
-          {paragraphs.length > 0 && (
-            <div className="relative mt-6">
-              <div
-                className="release-notes-scroll max-h-[min(620px,calc(100vh-180px))] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8"
-                style={{
-                  WebkitOverflowScrolling: "touch",
-                  overscrollBehavior: "contain",
-                  scrollbarGutter: "stable",
-                }}
-              >
-                <div className="space-y-5">
-                  {paragraphs.map((paragraph, index) => (
-                    <p key={`${paragraph.slice(0, 28)}-${index}`} className="text-[16px] leading-8 text-white/62">
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-              </div>
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-[24px] bg-gradient-to-b from-[#030303] via-[#030303]/70 to-transparent" />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[24px] bg-gradient-to-t from-[#030303] via-[#030303]/70 to-transparent" />
-            </div>
-          )}
+          {paragraphs.length > 0 && <ArticleBodyScroll paragraphs={paragraphs} />}
           <a
             href={article.url}
             target="_blank"
