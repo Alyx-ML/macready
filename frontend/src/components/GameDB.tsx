@@ -245,8 +245,7 @@ export function GameDB() {
 
   const handleAddSteamGame = async (item: SteamCatalogItem) => {
     if (isStaticDataMode) {
-      const existing = (games || []).find(g => g.steam_app_id === item.steam_app_id || g.name === item.name);
-      if (existing) runPageCrossfade(() => setDetailId(existing.id));
+      runPageCrossfade(() => setDetailId(Number(item.steam_app_id)));
       return;
     }
     setAddingSteamId(item.steam_app_id);
