@@ -1784,20 +1784,19 @@ function CrossoverChangelogPanel({
         </aside>
 
         <div className="relative min-w-0 px-4 pb-5 md:px-6 lg:px-0 lg:py-6 lg:pr-6">
-          <div
-            className="pointer-events-none absolute bottom-0 right-0 z-[1] hidden size-[360px] items-end justify-end overflow-hidden md:flex lg:size-[430px]"
-            style={{
-              maskImage: "radial-gradient(circle at 58% 58%, black 0%, black 34%, transparent 72%)",
-              WebkitMaskImage: "radial-gradient(circle at 58% 58%, black 0%, black 34%, transparent 72%)",
-            }}
-          >
+          <div className="pointer-events-none absolute -bottom-24 -right-24 z-[1] hidden size-[620px] items-end justify-end overflow-hidden md:flex lg:-bottom-32 lg:-right-32 lg:size-[760px]">
             <img
               src={`${import.meta.env.BASE_URL}imgs/crossover-icon.webp`}
               alt=""
-              className="w-[300px] translate-x-8 translate-y-6 opacity-[0.11] mix-blend-screen lg:w-[370px]"
+              className="w-[560px] translate-x-10 translate-y-8 opacity-[0.13] mix-blend-screen lg:w-[700px]"
+              style={{
+                maskImage: "radial-gradient(ellipse at 58% 58%, black 0%, black 36%, rgba(0,0,0,0.62) 50%, transparent 76%)",
+                WebkitMaskImage: "radial-gradient(ellipse at 58% 58%, black 0%, black 36%, rgba(0,0,0,0.62) 50%, transparent 76%)",
+              }}
               loading="lazy"
               decoding="async"
             />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_62%_62%,transparent_0%,transparent_28%,rgba(3,3,3,0.42)_56%,#030303_82%)]" />
           </div>
           <div
             className="release-notes-scroll relative z-10 max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
