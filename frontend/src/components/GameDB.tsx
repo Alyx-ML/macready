@@ -1295,8 +1295,7 @@ function AppStoreFeed({
   onOpenArticle: (article: MacNewsItem) => void;
   formatDate: (value?: string) => string;
 }) {
-  const leadApps = articles.slice(0, 6);
-  const remainingApps = articles.slice(6, 18);
+  const [appSearch, setAppSearch] = useState("");
 
   const getMaker = (article: MacNewsItem) => {
     return typeof article.metadata?.maker === "string" ? article.metadata.maker : "";
@@ -1308,6 +1307,27 @@ function AppStoreFeed({
     return [rank ? `#${rank}` : "", getAppStoreChart(article), date].filter(Boolean).join(" · ");
   };
 
+  const filteredApps = useMemo(() => {
+    const query = appSearch.trim().toLowerCase();
+
+    if (!query) {
+      return articles;
+    }
+
+    return articles.filter((article) => {
+      const haystack = [
+        getAppStoreName(article),
+        getMaker(article),
+        getAppStoreChart(article),
+        article.summary ?? "",
+      ].join(" ").toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [appSearch, articles]);
+  const leadApps = filteredApps.slice(0, 6);
+  const remainingApps = filteredApps.slice(6, 18);
+
   return (
     <section className="grid gap-10">
       <div>
@@ -1318,6 +1338,40 @@ function AppStoreFeed({
           </div>
         </div>
 
+        <div className="mb-7 max-w-[520px]">
+          <label className="relative block">
+            <span className="absolute inset-y-0 left-4 z-10 flex items-center text-white/88">
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.55"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ shapeRendering: "geometricPrecision", transform: "translateZ(0)" }}
+              >
+                <circle cx="11" cy="11" r="7.25" vectorEffect="non-scaling-stroke" />
+                <path d="m16.25 16.25 4.25 4.25" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </span>
+            <input
+              value={appSearch}
+              onChange={(event) => setAppSearch(event.target.value)}
+              placeholder="Search apps"
+              className="h-11 w-full rounded-full bg-white/[0.055] pl-10 pr-4 text-[13px] text-white ring-1 ring-white/[0.11] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_16px_40px_rgba(0,0,0,0.22)] transition-colors placeholder:text-white/32 focus:bg-white/[0.075] focus:outline-none focus:ring-white/[0.22]"
+              autoComplete="off"
+            />
+          </label>
+        </div>
+
+        {filteredApps.length === 0 ? (
+          <div className="rounded-[18px] bg-white/[0.025] px-5 py-8 text-center ring-1 ring-white/[0.045]">
+            <p className="text-[15px] font-medium text-white/72">No apps found</p>
+            <p className="mt-2 text-[13px] text-white/38">Try another app name or developer.</p>
+          </div>
+        ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {leadApps.map((article) => (
             <button
@@ -1352,6 +1406,7 @@ function AppStoreFeed({
             </button>
           ))}
         </div>
+        )}
 
         {remainingApps.length > 0 && (
           <div className="mt-10">
