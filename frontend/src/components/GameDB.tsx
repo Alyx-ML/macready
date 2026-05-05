@@ -1811,6 +1811,8 @@ function AppStoreArticleReader({
   ].slice(0, 6);
   const heroImage = appleDetails?.image_url || article.image_url;
   const releaseNotes = typeof metadata.releaseNotes === "string" ? metadata.releaseNotes : "";
+  const bodyParagraphs = formatArticleParagraphs(body);
+  const releaseNoteParagraphs = formatArticleParagraphs(releaseNotes);
 
   const summaryRows = [
     formattedPrice ? ["Price", formattedPrice] : null,
@@ -1915,11 +1917,7 @@ function AppStoreArticleReader({
                 <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">App details</p>
               )}
               {isLoadingAppleDetails && <p className="mt-5 text-[14px] text-white/38">Loading Apple details...</p>}
-              {body && (
-                <p className="mt-5 max-w-[760px] whitespace-pre-line text-[15px] leading-7 text-white/62">
-                  {body}
-                </p>
-              )}
+              {bodyParagraphs.length > 0 && <ArticleBodyScroll paragraphs={bodyParagraphs} />}
               {detailRows.length > 0 && (
                 <dl className="mt-8 grid gap-x-10 gap-y-5 sm:grid-cols-2">
                   {detailRows.map(([label, value]) => (
@@ -1930,24 +1928,22 @@ function AppStoreArticleReader({
                   ))}
                 </dl>
               )}
-              {releaseNotes && (
-              <div className="mt-8 border-t border-white/[0.055] pt-6">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Latest version notes</p>
-                <p className="mt-4 max-w-[760px] whitespace-pre-line text-[14px] leading-7 text-white/56">
-                  {releaseNotes}
-                </p>
-              </div>
-            )}
-            {screenshots.length > 0 && (
-              <div className="mt-9 border-t border-white/[0.055] pt-6">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Screenshots</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {screenshots.map((src) => (
-                    <img key={src} src={src} alt="" loading="lazy" decoding="async" className="aspect-[16/10] w-full rounded-[18px] object-cover opacity-85" />
-                  ))}
+              {releaseNoteParagraphs.length > 0 && (
+                <div className="mt-8 border-t border-white/[0.055] pt-6">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Latest version notes</p>
+                  <ArticleBodyScroll paragraphs={releaseNoteParagraphs} />
                 </div>
-              </div>
-            )}
+              )}
+              {screenshots.length > 0 && (
+                <div className="mt-9 border-t border-white/[0.055] pt-6">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Screenshots</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {screenshots.map((src) => (
+                      <img key={src} src={src} alt="" loading="lazy" decoding="async" className="aspect-[16/10] w-full rounded-[18px] object-cover opacity-85" />
+                    ))}
+                  </div>
+                </div>
+              )}
           </div>
           <aside className="space-y-7">
             {summaryRows.length > 0 && (
