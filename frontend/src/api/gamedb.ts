@@ -89,10 +89,7 @@ export async function listGames(params?: {
   hardware?: string;
 }): Promise<Game[]> {
   if (USE_STATIC_DATA) {
-    const data = await fetchStaticJSON<{ items: SteamCatalogItem[] }>("steam-trending.json");
-    return data.items
-      .filter((item) => itemMatchesSearch(item, params?.search) && itemMatchesStatus(item, params?.status))
-      .map(steamItemToGame);
+    return [];
   }
   const sp = new URLSearchParams();
   if (params?.search) sp.set("search", params.search);

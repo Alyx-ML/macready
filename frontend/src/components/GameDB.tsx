@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Game, MacNewsCategory, MacNewsItem } from "../types/gamedb";
 import { listGames, getDistinctValues, createGame, getMe, getMacNews, getAppStoreDetails, getSteamTrending, searchSteamCatalog, isStaticDataMode, type SteamCatalogItem } from "../api/gamedb";
 import { FloatingAgentChat } from "./FloatingAgentChat";
-import { LoadingCards, GameCard, NotRatedBadge, TierBadge } from "./gamedb/GameCards";
+import { LoadingCards, GameCard, TierBadge } from "./gamedb/GameCards";
 import { GameDetailView } from "./gamedb/GameDetailView";
 import { AuthModal } from "./gamedb/AuthModal";
 import { AccountPage } from "./gamedb/AccountPage";
@@ -691,53 +691,13 @@ function GameListView({
             <div>
               <h3 className="text-[15px] font-semibold text-white tracking-tight mb-4 px-1">Steam Catalog</h3>
               <CardSilkField>
-                <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {steamResults.map(r => (
-                    <button 
-                      key={r.steam_app_id} 
-                      aria-label={r.name}
-                      data-steam-card="true"
-                      onClick={() => onAddSteamGame(r)} 
-                      disabled={addingSteamId === r.steam_app_id}
-                      className="group w-full relative text-left rounded-2xl overflow-hidden bg-black/40 backdrop-blur-3xl border border-white/5 hover:border-white/20 transition-all duration-300 focus:outline-none shadow-xl"
-                    >
-                      <div className="relative w-full aspect-[460/215] bg-transparent overflow-hidden">
-                        {addingSteamId === r.steam_app_id && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
-                            <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                          </div>
-                        )}
-                        <img
-                src={r.cover_art_url}
-                loading="lazy"
-                decoding="async"
-                width={460}
-                height={215}
-                className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300"
-                alt={r.name}
-                onError={(event) => {
-                  const card = event.currentTarget.closest('[data-steam-card]') as HTMLElement | null;
-                  if (card) card.style.display = "none";
-                }}
-              />
-                        
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300 z-10" />
-                        <div className="absolute top-3 right-3 z-20">
-                          {r.compatibility_label === "Unrated" ? <NotRatedBadge size="sm" /> : r.compatibility_tier && <TierBadge tier={r.compatibility_tier} size="sm" />}
-                        </div>
-                        
-                        <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
-                          <h3 className="text-[13px] font-medium text-white truncate drop-shadow-md">{r.name}</h3>
-                          <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/45">
-                            {r.mac_native && <span>Mac native</span>}
-                            {r.mac_native && r.crossover_playable && <span>·</span>}
-                            {r.crossover_playable && <span>CrossOver</span>}
-                            {!r.mac_native && !r.crossover_playable && <span>{r.compatibility_label || "Unrated"}</span>}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                <div className="relative z-10">
+                  <SteamGameGrid
+                    games={steamResults}
+                    addingSteamId={addingSteamId}
+                    onSelect={onAddSteamGame}
+                    onOpenDetail={onOpenDetail}
+                  />
                 </div>
               </CardSilkField>
             </div>
