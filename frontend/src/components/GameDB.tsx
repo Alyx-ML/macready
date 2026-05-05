@@ -1438,11 +1438,9 @@ function MacOSReleaseNotesPanel({
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.02] tracking-tight text-white md:text-[46px]">
             {article.title}
           </h1>
-          {article.summary && (
-            <p className="mt-5 text-[15px] leading-7 text-white/52">
-              {article.summary}
-            </p>
-          )}
+          <p className="mt-5 text-[15px] leading-7 text-white/52">
+            CrossOver lets Mac users run Windows games and apps without installing Windows, using CodeWeavers' Wine-based compatibility layer tuned for macOS.
+          </p>
           <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
             <div>
               <dt className="text-white/34">System</dt>
