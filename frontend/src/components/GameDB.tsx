@@ -1910,8 +1910,8 @@ function AppStoreArticleReader({
       </section>
 
       {(body || detailRows.length > 0 || releaseNotes || screenshots.length > 0 || advisories.length > 0 || isLoadingAppleDetails) && (
-        <section className="pt-10">
-          <div className="grid gap-9 border-t border-white/[0.055] pt-8 md:grid-cols-[minmax(0,1fr)_300px]">
+        <section className="pt-7">
+          <div className="grid gap-9 border-t border-white/[0.055] pt-6 md:grid-cols-[minmax(0,1fr)_300px]">
             <div>
               {(body || detailRows.length > 0 || releaseNotes || screenshots.length > 0 || isLoadingAppleDetails) && (
                 <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">App details</p>
