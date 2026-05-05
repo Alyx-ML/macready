@@ -1,0 +1,15 @@
+{
+  "name": "macgamedb",
+  "version": "1.0.0",
+  "description": "MacGameDB — Apple Silicon game compatibility tracker",
+  "scripts": {
+    "dev": "concurrently \"bun run backend/server.ts\" \"cd frontend && bun run dev\"",
+    "build": "cd frontend && bun run build",
+    "start": "cd frontend && bun run build && bun run backend/server.ts",
+    "backend": "bun run --watch backend/server.ts",
+    "frontend": "cd frontend && bun run dev"
+  },
+  "dependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

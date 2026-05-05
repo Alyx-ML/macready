@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wine filter">
+  <defs>
+    <radialGradient id="glass" cx="28" cy="18" r="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="0.34" stop-color="#dfe7ff" stop-opacity="0.06"/>
+      <stop offset="0.68" stop-color="#15171c" stop-opacity="0.66"/>
+      <stop offset="1" stop-color="#020203" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="19" y1="8" x2="62" y2="71" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.36"/>
+      <stop offset="0.42" stop-color="#ffffff" stop-opacity="0.06"/>
+      <stop offset="0.72" stop-color="#ffffff" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.26"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000" flood-opacity="0.70"/>
+    </filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="1.3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="40" cy="40" r="33" fill="url(#glass)" filter="url(#softShadow)"/>
+  <circle cx="40" cy="40" r="33" stroke="url(#rim)" stroke-width="0.85"/>
+  <path d="M19 23C27 13 49 10 62 24" stroke="#fff" stroke-opacity="0.12" stroke-width="0.85" stroke-linecap="round"/>
+  <path d="M21 58C31 68 53 69 62 55" stroke="#fff" stroke-opacity="0.07" stroke-width="1" stroke-linecap="round"/>
+  <g filter="url(#glow)" stroke="#D8D8D8" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M29 22H51L48 38C47 45 42 48 40 48C38 48 33 45 32 38L29 22Z" fill="none"/>
+    <path d="M40 48V59" fill="none"/>
+    <path d="M31 59H49" fill="none"/>
+    <path d="M33 33H47" stroke-opacity="0.55" fill="none"/>
+  </g>
+</svg>

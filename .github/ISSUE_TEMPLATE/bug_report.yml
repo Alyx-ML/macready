@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible problem in DAC.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please include a minimal reproduction when possible.
+  - type: input
+    id: version
+    attributes:
+      label: DAC version
+      description: Output of `dac version`
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: OS, architecture, and shell if relevant
+      placeholder: macOS 15 arm64, zsh
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem clearly.
+      placeholder: DAC fails to load a semantic TSX dashboard when...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Prefer a minimal dashboard or project layout if possible.
+      placeholder: |
+        1. Create a project with...
+        2. Run `dac validate --dir ...`
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      render: shell
