@@ -158,6 +158,10 @@ function formatArticleParagraphs(value: string) {
   return paragraphs;
 }
 
+function titleCaseDetailValue(value: string) {
+  return value.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
 function hasSteamCover(item: SteamCatalogItem) {
   const value = item.cover_art_url?.trim();
   return Boolean(value && /^https?:\/\//.test(value));
@@ -1934,7 +1938,7 @@ function AppStoreArticleReader({
   const detailRows = [
     maker ? ["Developer", maker] : null,
     sellerName && sellerName !== maker ? ["Seller", sellerName] : null,
-    kind ? ["Type", kind] : null,
+    kind ? ["Type", titleCaseDetailValue(kind)] : null,
     advisory ? ["Age rating", advisory] : null,
     releaseDate ? ["Released", releaseDate] : null,
     updatedDate ? ["Updated", updatedDate] : null,
