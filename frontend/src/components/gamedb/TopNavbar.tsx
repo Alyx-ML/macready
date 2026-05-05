@@ -406,11 +406,9 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
       <style>{`
         .mac-menu-dropdown {
           opacity: 0;
-          transform: translate3d(0, -4px, 0);
-          clip-path: inset(0 0 100% 0 round 12px);
-          animation: macMenuVerticalReveal 180ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+          animation: macMenuFadeIn 90ms ease-out forwards;
           transform-origin: top center;
-          will-change: opacity, transform, clip-path;
+          will-change: opacity;
         }
 
         .mac-menu-dropdown * {
@@ -420,16 +418,12 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
           transition-delay: 0s !important;
         }
 
-        @keyframes macMenuVerticalReveal {
+        @keyframes macMenuFadeIn {
           from {
             opacity: 0;
-            transform: translate3d(0, -4px, 0);
-            clip-path: inset(0 0 100% 0 round 12px);
           }
           to {
             opacity: 1;
-            transform: translate3d(0, 0, 0);
-            clip-path: inset(0 0 0 0 round 12px);
           }
         }
 
