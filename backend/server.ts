@@ -278,13 +278,37 @@ function parseAppleAppLookup(payload: any) {
 }
 
 function parseCodeWeaversChangelog(html: string) {
+  const parseChangelogSections = (releaseHtml: string) => {
+    const sections = Array.from(releaseHtml.matchAll(/<li>\s*<span[^>]*class=["']subtitle["'][^>]*>([^<]+)<\/span>\s*<ul>([\s\S]*?)<\/ul>\s*<\/li>/gi))
+      .map((sectionMatch) => {
+        const title = stripNewsHtml(sectionMatch[1]).replace(/:$/, "");
+        const items = Array.from(sectionMatch[2].matchAll(/<li>([\s\S]*?)<\/li>/gi))
+          .map((itemMatch) => stripNewsHtml(itemMatch[1]))
+          .filter(Boolean)
+          .map((text) => ({ kind: "listItem" as const, text }));
+        return { title, items };
+      })
+      .filter((section) => section.title && section.items.length > 0);
+
+    if (sections.length > 0) return sections;
+
+    const items = Array.from(releaseHtml.matchAll(/<li>([\s\S]*?)<\/li>/gi))
+      .map((itemMatch) => stripNewsHtml(itemMatch[1]))
+      .filter(Boolean)
+      .map((text) => ({ kind: "listItem" as const, text }));
+
+    return items.length > 0 ? [{ title: "Changes", items }] : [];
+  };
+
   const entries = Array.from(html.matchAll(/<a\s+name=["']([\d.]+)["']><\/a>\s*<span[^>]*>\s*<b>([\d.]+)<\/b>\s*CrossOver\s*-\s*([^<]+)<\/span>([\s\S]*?)(?=<a\s+name=["'][\d.]+["']><\/a>|$)/gi))
     .slice(0, 8)
     .map((releaseMatch) => {
       const version = releaseMatch[2].trim();
       const dateText = releaseMatch[3].trim();
-      const notes = stripNewsHtml(releaseMatch[4]);
-      const title = `Crossover ${version} - ${dateText}`;
+      const releaseHtml = releaseMatch[4];
+      const notes = stripNewsHtml(releaseHtml);
+      const changelogSections = parseChangelogSections(releaseHtml);
+      const title = `CrossOver ${version} - ${dateText}`;
       const published = new Date(dateText).toISOString();
       const summary = notes.length > 260 ? `${notes.slice(0, 257).trim()}...` : notes;
 
@@ -298,6 +322,12 @@ function parseCodeWeaversChangelog(html: string) {
         summary,
         content: notes.length > 1800 ? `${notes.slice(0, 1797).trim()}...` : notes,
         image_url: "https://media.codeweavers.com/pub/crossover/website/images/og-images/changelog_og_1200x630.png",
+        metadata: {
+          changelogSections,
+          version,
+          product: "CrossOver",
+          releaseDate: dateText,
+        },
       };
     });
 
@@ -323,6 +353,10 @@ function parseCodeWeaversChangelog(html: string) {
         summary,
         content: content.length > 1800 ? `${content.slice(0, 1797).trim()}...` : content,
         image_url: "",
+        metadata: {
+          changelogSections: [{ title: "Changes", items: content ? [{ kind: "paragraph" as const, text: content }] : [] }],
+          product: "CrossOver",
+        },
       };
     });
 }
@@ -1067,7 +1101,7 @@ export async function handler(req: Request): Promise<Response> {
           const bTime = b.published_at ? Date.parse(b.published_at) : 0;
           return bTime - aTime;
         })
-        .slice(0, 120);
+        .slice(0, 240);
 
       return json({ items });
     } catch (e: any) {

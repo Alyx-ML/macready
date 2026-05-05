@@ -214,7 +214,7 @@ export function GameDB() {
     enabled: mainView === "compatibility" || detailId !== null,
   });
   const { data: macNews, isLoading: isMacNewsLoading } = useQuery({
-    queryKey: ["gamedb", "mac-news", "tahoe-release-notes"],
+    queryKey: ["gamedb", "mac-news", "structured-release-notes"],
     queryFn: getMacNews,
     staleTime: 5 * 60_000,
   });
@@ -887,6 +887,12 @@ function HomeEditorialPage({ newsItems, isLoading }: { newsItems: MacNewsItem[];
             onOpenArticle={openArticle}
             formatDate={formatDate}
           />
+        ) : activeCategory === "CrossOver" && activeArticles.some((article) => article.source === "CodeWeavers Changelog") ? (
+          <CrossoverUpdatesFeed
+            articles={activeArticles}
+            onOpenArticle={openArticle}
+            formatDate={formatDate}
+          />
         ) : (
           <>
             <section className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -1140,6 +1146,89 @@ function MacOSUpdatesFeed({
   );
 }
 
+function CrossoverUpdatesFeed({
+  articles,
+  onOpenArticle,
+  formatDate,
+}: {
+  articles: MacNewsItem[];
+  onOpenArticle: (article: MacNewsItem) => void;
+  formatDate: (value?: string) => string;
+}) {
+  const changelogArticles = articles.filter((article) => article.source === "CodeWeavers Changelog");
+  const mainChangelog = changelogArticles[0];
+  const blogPosts = articles.filter((article) => article.source === "CodeWeavers").slice(0, 6);
+  const recentChangelog = changelogArticles.slice(1, 5);
+
+  if (!mainChangelog) return null;
+
+  return (
+    <section className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_330px]">
+      <CrossoverChangelogPanel article={mainChangelog} formatDate={formatDate} />
+
+      <aside className="space-y-8 pt-1">
+        <section>
+          <p className="mb-4 text-[10px] uppercase tracking-[0.24em] text-white/55">Latest blog posts</p>
+          <div className="grid gap-4">
+            {blogPosts.map((article) => (
+              <button
+                key={article.id}
+                type="button"
+                onClick={() => onOpenArticle(article)}
+                className="group text-left"
+              >
+                {article.image_url && (
+                  <img
+                    src={article.image_url}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="mb-3 aspect-[16/9] w-full rounded-[12px] object-cover opacity-[0.76] transition-opacity duration-300 group-hover:opacity-100"
+                  />
+                )}
+                <p className="text-[9px] uppercase tracking-[0.2em] text-white/42">
+                  CodeWeavers {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
+                </p>
+                <h3 className="mt-1.5 text-[16px] font-medium leading-snug text-white/78 transition-colors group-hover:text-white">
+                  {article.title}
+                </h3>
+                {article.summary && (
+                  <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-white/46">
+                    {article.summary}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {recentChangelog.length > 0 && (
+          <section>
+            <p className="mb-4 text-[10px] uppercase tracking-[0.24em] text-white/55">Earlier changelog</p>
+            <div className="grid gap-3">
+              {recentChangelog.map((article) => (
+                <button
+                  key={article.id}
+                  type="button"
+                  onClick={() => onOpenArticle(article)}
+                  className="group rounded-[14px] bg-white/[0.025] px-4 py-3 text-left ring-1 ring-white/[0.045] transition-colors hover:bg-white/[0.045]"
+                >
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-white/34">
+                    {formatDate(article.published_at)}
+                  </p>
+                  <h3 className="mt-1 text-[14px] font-medium leading-snug text-white/72 transition-colors group-hover:text-white">
+                    {article.title}
+                  </h3>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+      </aside>
+    </section>
+  );
+}
+
 function AppStoreFeed({
   articles,
   onOpenArticle,
@@ -1277,6 +1366,12 @@ function ArticleReader({
   if (article.category === "Performance" && article.source === "Apple Developer" && article.metadata?.releaseNotesSections?.length) {
     return (
       <MacOSReleaseNotesReader article={article} onBack={onBack} formatDate={formatDate} />
+    );
+  }
+
+  if (article.category === "CrossOver" && article.source === "CodeWeavers Changelog") {
+    return (
+      <CrossoverChangelogReader article={article} onBack={onBack} formatDate={formatDate} />
     );
   }
 
@@ -1438,6 +1533,128 @@ function MacOSReleaseNotesReader({
         ← Back to MacOS Updates
       </button>
       <MacOSReleaseNotesPanel article={article} formatDate={formatDate} />
+    </article>
+  );
+}
+
+function CrossoverChangelogPanel({
+  article,
+  formatDate,
+}: {
+  article: MacNewsItem;
+  formatDate: (value?: string) => string;
+}) {
+  const sections = article.metadata?.changelogSections?.length
+    ? article.metadata.changelogSections
+    : [{ title: "Changes", items: article.content ? [{ kind: "paragraph" as const, text: article.content }] : [] }];
+  const version = article.metadata?.version ?? article.title.match(/\b\d+(?:\.\d+)+\b/)?.[0] ?? "";
+  const product = article.metadata?.product ?? "CrossOver";
+
+  return (
+    <section className="relative overflow-hidden rounded-[28px] bg-[#030303] ring-1 ring-white/[0.055]">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_26%),linear-gradient(90deg,rgba(255,255,255,0.035),transparent_34%)]" />
+
+      <div className="relative grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="px-7 py-8 md:px-9 lg:sticky lg:top-14 lg:h-[calc(100vh-92px)] lg:py-10">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-white/36">
+            Crossover · CodeWeavers Changelog {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
+          </p>
+          <h1 className="mt-4 text-[34px] font-semibold leading-[1.02] tracking-tight text-white md:text-[46px]">
+            {article.title}
+          </h1>
+          {article.summary && (
+            <p className="mt-5 text-[15px] leading-7 text-white/52">
+              {article.summary}
+            </p>
+          )}
+          <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
+            <div>
+              <dt className="text-white/34">Product</dt>
+              <dd className="mt-1 font-medium text-white/78">{product}</dd>
+            </div>
+            <div>
+              <dt className="text-white/34">Version</dt>
+              <dd className="mt-1 font-medium text-white/78">{version}</dd>
+            </div>
+          </dl>
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-8 inline-flex h-8 items-center rounded-full bg-white/[0.055] px-4 text-[13px] font-medium text-white/62 ring-1 ring-white/[0.06] transition-colors hover:bg-white/[0.09] hover:text-white"
+          >
+            CodeWeavers source
+          </a>
+        </aside>
+
+        <div className="relative min-w-0 px-4 pb-5 md:px-6 lg:px-0 lg:py-6 lg:pr-6">
+          <div
+            className="release-notes-scroll max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 ring-1 ring-white/[0.055] md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
+            style={{
+              WebkitOverflowScrolling: "touch",
+              overscrollBehavior: "contain",
+              scrollbarGutter: "stable",
+            }}
+          >
+            <div className="space-y-10">
+              {sections.map((section, sectionIndex) => (
+                <section
+                  key={`${section.title}-${sectionIndex}`}
+                  className="relative pl-5 before:absolute before:left-0 before:top-2 before:h-[calc(100%-8px)] before:w-px before:bg-white/[0.08]"
+                >
+                  <h2 className="text-[22px] font-semibold tracking-tight text-white">
+                    {section.title}
+                  </h2>
+                  <div className="mt-5 space-y-4">
+                    {section.items.map((item, itemIndex) => {
+                      if (item.kind === "heading") {
+                        return (
+                          <h3 key={`${item.text}-${itemIndex}`} className="pt-3 text-[14px] font-semibold uppercase tracking-[0.16em] text-white/46">
+                            {item.text}
+                          </h3>
+                        );
+                      }
+                      if (item.kind === "listItem") {
+                        return (
+                          <p key={`${item.text}-${itemIndex}`} className="relative pl-5 text-[15px] leading-7 text-white/62 before:absolute before:left-0 before:top-[0.72em] before:size-1.5 before:rounded-full before:bg-white/34">
+                            {item.text}
+                          </p>
+                        );
+                      }
+                      return (
+                        <p key={`${item.text}-${itemIndex}`} className="text-[15px] leading-7 text-white/62">
+                          {item.text}
+                        </p>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+          <div className="pointer-events-none absolute inset-x-4 top-0 h-20 rounded-t-[24px] bg-gradient-to-b from-[#030303] via-[#030303]/70 to-transparent md:inset-x-6 lg:left-0 lg:right-6 lg:top-6" />
+          <div className="pointer-events-none absolute inset-x-4 bottom-5 h-20 rounded-b-[24px] bg-gradient-to-t from-[#030303] via-[#030303]/70 to-transparent md:inset-x-6 lg:left-0 lg:right-6 lg:bottom-6" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CrossoverChangelogReader({
+  article,
+  onBack,
+  formatDate,
+}: {
+  article: MacNewsItem;
+  onBack: () => void;
+  formatDate: (value?: string) => string;
+}) {
+  return (
+    <article className="mx-auto max-w-[1180px] pb-14">
+      <button type="button" onClick={onBack} className="mb-6 text-[13px] text-white/44 transition-colors hover:text-white">
+        ← Back to Crossover
+      </button>
+      <CrossoverChangelogPanel article={article} formatDate={formatDate} />
     </article>
   );
 }

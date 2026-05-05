@@ -145,6 +145,14 @@ export interface MacNewsItem {
     releaseNotesUrl?: string;
     collectionUrl?: string;
     osName?: string;
+    product?: string;
+    changelogSections?: {
+      title: string;
+      items: {
+        kind?: "paragraph" | "listItem" | "heading";
+        text: string;
+      }[];
+    }[];
   };
 }
 
