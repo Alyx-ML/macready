@@ -1431,16 +1431,18 @@ function MacOSReleaseNotesPanel({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_26%),linear-gradient(90deg,rgba(255,255,255,0.035),transparent_34%)]" />
 
       <div className="relative grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="px-7 py-8 md:px-9 lg:py-10">
+        <aside className="px-7 py-8 md:px-9 lg:sticky lg:top-14 lg:h-[calc(100vh-92px)] lg:py-10">
           <p className="text-[10px] uppercase tracking-[0.24em] text-white/36">
             MacOS Updates · Apple Developer {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
           </p>
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.02] tracking-tight text-white md:text-[46px]">
             {article.title}
           </h1>
-          <p className="mt-5 text-[15px] leading-7 text-white/52">
-            CrossOver lets Mac users run Windows games and apps without installing Windows, using CodeWeavers' Wine-based compatibility layer tuned for macOS.
-          </p>
+          {article.summary && (
+            <p className="mt-5 text-[15px] leading-7 text-white/52">
+              {article.summary}
+            </p>
+          )}
           <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
             <div>
               <dt className="text-white/34">System</dt>
@@ -1553,18 +1555,16 @@ function CrossoverChangelogPanel({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_26%),linear-gradient(90deg,rgba(255,255,255,0.035),transparent_34%)]" />
 
       <div className="relative grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="px-7 py-8 md:px-9 lg:sticky lg:top-14 lg:h-[calc(100vh-92px)] lg:py-10">
+        <aside className="px-7 py-8 md:px-9 lg:py-10">
           <p className="text-[10px] uppercase tracking-[0.24em] text-white/36">
             Crossover · CodeWeavers Changelog {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
           </p>
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.02] tracking-tight text-white md:text-[46px]">
             {article.title}
           </h1>
-          {article.summary && (
-            <p className="mt-5 text-[15px] leading-7 text-white/52">
-              {article.summary}
-            </p>
-          )}
+          <p className="mt-5 text-[15px] leading-7 text-white/52">
+            CrossOver lets Mac users run Windows games and apps without installing Windows, using CodeWeavers' Wine-based compatibility layer tuned for macOS.
+          </p>
           <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
             <div>
               <dt className="text-white/34">Product</dt>
