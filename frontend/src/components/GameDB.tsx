@@ -1163,68 +1163,68 @@ function CrossoverUpdatesFeed({
   if (!mainChangelog) return null;
 
   return (
-    <section className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_330px]">
+    <section className="grid gap-8">
       <CrossoverChangelogPanel article={mainChangelog} formatDate={formatDate} />
 
-      <aside className="space-y-8 pt-1">
+      <section>
+        <p className="mb-4 text-[10px] uppercase tracking-[0.24em] text-white/55">Latest blog posts</p>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {blogPosts.map((article) => (
+            <button
+              key={article.id}
+              type="button"
+              onClick={() => onOpenArticle(article)}
+              className="group grid grid-cols-[120px_minmax(0,1fr)] gap-4 text-left sm:grid-cols-[150px_minmax(0,1fr)] xl:block"
+            >
+              {article.image_url && (
+                <img
+                  src={article.image_url}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="aspect-[16/10] h-full min-h-[92px] w-full rounded-[12px] object-cover opacity-[0.76] transition-opacity duration-300 group-hover:opacity-100 xl:mb-3 xl:h-auto xl:min-h-0"
+                />
+              )}
+              <span className="min-w-0">
+                <span className="block text-[9px] uppercase tracking-[0.2em] text-white/42">
+                  CodeWeavers {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
+                </span>
+                <span className="mt-1.5 line-clamp-2 block text-[16px] font-medium leading-snug text-white/78 transition-colors group-hover:text-white">
+                  {article.title}
+                </span>
+                {article.summary && (
+                  <span className="mt-2 line-clamp-2 block text-[12px] leading-5 text-white/46">
+                    {article.summary}
+                  </span>
+                )}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {recentChangelog.length > 0 && (
         <section>
-          <p className="mb-4 text-[10px] uppercase tracking-[0.24em] text-white/55">Latest blog posts</p>
-          <div className="grid gap-4">
-            {blogPosts.map((article) => (
+          <p className="mb-4 text-[10px] uppercase tracking-[0.24em] text-white/55">Earlier changelog</p>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {recentChangelog.map((article) => (
               <button
                 key={article.id}
                 type="button"
                 onClick={() => onOpenArticle(article)}
-                className="group text-left"
+                className="group rounded-[14px] bg-white/[0.025] px-4 py-3 text-left ring-1 ring-white/[0.045] transition-colors hover:bg-white/[0.045]"
               >
-                {article.image_url && (
-                  <img
-                    src={article.image_url}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="mb-3 aspect-[16/9] w-full rounded-[12px] object-cover opacity-[0.76] transition-opacity duration-300 group-hover:opacity-100"
-                  />
-                )}
-                <p className="text-[9px] uppercase tracking-[0.2em] text-white/42">
-                  CodeWeavers {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
+                <p className="text-[9px] uppercase tracking-[0.2em] text-white/34">
+                  {formatDate(article.published_at)}
                 </p>
-                <h3 className="mt-1.5 text-[16px] font-medium leading-snug text-white/78 transition-colors group-hover:text-white">
+                <h3 className="mt-1 text-[14px] font-medium leading-snug text-white/72 transition-colors group-hover:text-white">
                   {article.title}
                 </h3>
-                {article.summary && (
-                  <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-white/46">
-                    {article.summary}
-                  </p>
-                )}
               </button>
             ))}
           </div>
         </section>
-
-        {recentChangelog.length > 0 && (
-          <section>
-            <p className="mb-4 text-[10px] uppercase tracking-[0.24em] text-white/55">Earlier changelog</p>
-            <div className="grid gap-3">
-              {recentChangelog.map((article) => (
-                <button
-                  key={article.id}
-                  type="button"
-                  onClick={() => onOpenArticle(article)}
-                  className="group rounded-[14px] bg-white/[0.025] px-4 py-3 text-left ring-1 ring-white/[0.045] transition-colors hover:bg-white/[0.045]"
-                >
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-white/34">
-                    {formatDate(article.published_at)}
-                  </p>
-                  <h3 className="mt-1 text-[14px] font-medium leading-snug text-white/72 transition-colors group-hover:text-white">
-                    {article.title}
-                  </h3>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-      </aside>
+      )}
     </section>
   );
 }
@@ -1465,7 +1465,7 @@ function MacOSReleaseNotesPanel({
 
         <div className="relative min-w-0 px-4 pb-5 md:px-6 lg:px-0 lg:py-6 lg:pr-6">
           <div
-            className="release-notes-scroll max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 ring-1 ring-white/[0.055] md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
+            className="release-notes-scroll max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
             style={{
               WebkitOverflowScrolling: "touch",
               overscrollBehavior: "contain",
@@ -1589,7 +1589,7 @@ function CrossoverChangelogPanel({
 
         <div className="relative min-w-0 px-4 pb-5 md:px-6 lg:px-0 lg:py-6 lg:pr-6">
           <div
-            className="release-notes-scroll max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 ring-1 ring-white/[0.055] md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
+            className="release-notes-scroll max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
             style={{
               WebkitOverflowScrolling: "touch",
               overscrollBehavior: "contain",
