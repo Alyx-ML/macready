@@ -50,7 +50,7 @@ const MAC_NEWS_FEEDS: MacNewsFeed[] = [
   { source: "MacRumors", url: "https://feeds.macrumors.com/MacRumors-All" },
   { source: "AppleInsider", url: "https://appleinsider.com/rss/news" },
   { source: "CodeWeavers", url: "https://www.codeweavers.com/blog/?rss=1", category: "CrossOver" },
-  { source: "Apple Developer", url: "https://developer.apple.com/news/releases/rss/releases.rss", category: "Performance", include: /\bmacOS\s+\d|\bmacOS\b.{0,60}\b(beta|release candidate|RC|release notes|security update)\b/i },
+  { source: "Apple Developer", url: "https://developer.apple.com/news/releases/rss/releases.rss", category: "Performance", include: /\b(?:macOS\s+26|Tahoe)\b.{0,80}\b(beta|release candidate|RC|release notes|security update|released|available|update)\b/i },
 ];
 
 const APP_STORE_CHARTS = [
@@ -59,7 +59,10 @@ const APP_STORE_CHARTS = [
 ];
 
 const CROSSOVER_CHANGELOG_URL = "https://www.codeweavers.com/crossover/changelog?srsltid=AfmBOorPYli8YCpEdYHmbTEjgbAzDcmIfaeIXKkRoAY4iWSDz4jRQlo4";
-const MACOS_RELEASE_NOTES_URL = "https://developer.apple.com/documentation/macos-release-notes/macos-26_5-release-notes";
+const APPLE_DEVELOPER_BASE_URL = "https://developer.apple.com";
+const MACOS_RELEASE_NOTES_COLLECTION_URL = `${APPLE_DEVELOPER_BASE_URL}/documentation/macos-release-notes`;
+const MACOS_RELEASE_NOTES_COLLECTION_JSON_URL = `${APPLE_DEVELOPER_BASE_URL}/tutorials/data/documentation/macos-release-notes.json`;
+const MACOS_RELEASE_NOTES_JSON_BASE_URL = `${APPLE_DEVELOPER_BASE_URL}/tutorials/data/documentation/macos-release-notes`;
 const STEAM_SEARCH_INDEX_TERMS = [
   "half life", "portal", "counter strike", "left 4 dead", "team fortress",
   "baldur", "cyberpunk", "elden ring", "stardew", "terraria", "hades",
@@ -324,30 +327,126 @@ function parseCodeWeaversChangelog(html: string) {
     });
 }
 
-function parseAppleMacOSReleaseNotes(html: string) {
-  const [, major, minor] = MACOS_RELEASE_NOTES_URL.match(/macos-(\d+)_(\d+)-release-notes/i) as RegExpMatchArray;
-  const title = `macOS ${major}.${minor} Release Notes`;
-  const bodyText = stripNewsHtml(html)
-    .replace(/Documentation\s+Release Notes\s+macOS Release Notes\s+/i, "")
-    .replace(/View in English[\s\S]*?Table of Contents/i, "")
-    .replace(/Change language[\s\S]*?Download this guide/i, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const noteStart = bodyText.search(/Resolved Issues|Known Issues|Overview|General|AppKit|SwiftUI|Metal|Safari|Security/i);
-  const changelog = noteStart >= 0 ? bodyText.slice(noteStart) : bodyText;
-  const summary = changelog.length > 320 ? `${changelog.slice(0, 317).trim()}...` : changelog;
-  const content = changelog.length > 2400 ? `${changelog.slice(0, 2397).trim()}...` : changelog;
+function appleInlineText(inlineContent: any[] | undefined, references: Record<string, any>) {
+  return (inlineContent || []).map((part) => {
+    if (part?.type === "text") return String(part.text || "");
+    if (part?.type === "codeVoice") return String(part.code || "");
+    if (part?.type === "reference") {
+      const reference = references?.[part.identifier];
+      return String(reference?.title || reference?.titleInlineContent?.[0]?.text || "");
+    }
+    return "";
+  }).join("").replace(/\s+/g, " ").trim();
+}
+
+function appleBlockText(block: any, references: Record<string, any>): string[] {
+  if (!block) return [];
+  if (block.type === "paragraph") {
+    const text = appleInlineText(block.inlineContent, references);
+    return text ? [text] : [];
+  }
+  if (block.type === "unorderedList") {
+    return (block.items || []).flatMap((item: any) =>
+      (item.content || []).flatMap((child: any) => appleBlockText(child, references))
+    ).filter(Boolean);
+  }
+  return [];
+}
+
+function releaseNotesSlugFromIdentifier(identifier: string) {
+  return identifier.split("/").pop() || "";
+}
+
+function releaseNotesUrlFromSlug(slug: string) {
+  return `${APPLE_DEVELOPER_BASE_URL}/documentation/macos-release-notes/${slug}`;
+}
+
+function releaseNotesJsonUrlFromSlug(slug: string) {
+  return `${MACOS_RELEASE_NOTES_JSON_BASE_URL}/${slug}.json`;
+}
+
+function releaseVersionSortValue(identifier: string) {
+  const slug = releaseNotesSlugFromIdentifier(identifier);
+  const match = slug.match(/macos-26(?:_(\d+))?-release-notes/i);
+  return match ? Number(match[1] || 0) : -1;
+}
+
+function latestTahoeReleaseNote(collection: any) {
+  const section = (collection?.topicSections || []).find((topic: any) =>
+    topic?.title === "macOS 26" || topic?.anchor === "macOS-26"
+  );
+  const identifiers = Array.isArray(section?.identifiers) ? section.identifiers : [];
+  return identifiers
+    .filter((identifier: string) => /\/macos-26(?:_\d+)?-release-notes$/i.test(identifier))
+    .sort((a: string, b: string) => releaseVersionSortValue(b) - releaseVersionSortValue(a))[0] || "";
+}
+
+function parseAppleMacOSReleaseNotes(doc: any, slug: string) {
+  const references = doc?.references || {};
+  const title = String(doc?.metadata?.title || "macOS Tahoe Release Notes").trim();
+  const url = releaseNotesUrlFromSlug(slug);
+  const abstract = appleInlineText(doc?.abstract, references);
+  const contentBlocks = (doc?.primaryContentSections || []).flatMap((section: any) => section?.content || []);
+  const sections: { title: string; level: number; items: { kind: "paragraph" | "listItem" | "heading"; text: string; level?: number }[] }[] = [];
+  let currentSection: { title: string; level: number; items: { kind: "paragraph" | "listItem" | "heading"; text: string; level?: number }[] } | null = null;
+
+  for (const block of contentBlocks) {
+    if (block?.type === "heading") {
+      const heading = String(block.text || "").trim();
+      if (!heading) continue;
+      if (block.level <= 3 || !currentSection) {
+        currentSection = { title: heading, level: Number(block.level || 2), items: [] };
+        sections.push(currentSection);
+      } else {
+        currentSection.items.push({ kind: "heading", text: heading, level: Number(block.level || 4) });
+      }
+      continue;
+    }
+
+    if (!currentSection) {
+      currentSection = { title: "Overview", level: 2, items: [] };
+      sections.push(currentSection);
+    }
+
+    if (block?.type === "paragraph") {
+      const text = appleInlineText(block.inlineContent, references);
+      if (text) currentSection.items.push({ kind: "paragraph", text });
+      continue;
+    }
+
+    if (block?.type === "unorderedList") {
+      const items = appleBlockText(block, references);
+      for (const text of items) {
+        currentSection.items.push({ kind: "listItem", text });
+      }
+    }
+  }
+
+  const releaseNotesSections = sections.filter((section) => section.items.length > 0);
+  const content = releaseNotesSections.flatMap((section) => [
+    section.title,
+    ...section.items.map((item) => item.kind === "listItem" ? `- ${item.text}` : item.text)
+  ]).join("\n\n");
+  const summarySource = abstract || releaseNotesSections[0]?.items.find((item) => item.text)?.text || title;
+  const version = title.match(/\b26(?:\.\d+)?\b/)?.[0] || "26";
 
   return [{
-    id: `Apple Developer:${MACOS_RELEASE_NOTES_URL}`,
+    id: `Apple Developer:${url}`,
     title,
-    url: MACOS_RELEASE_NOTES_URL,
+    url,
     source: "Apple Developer",
     category: "Performance" as MacNewsCategory,
     published_at: new Date().toISOString(),
-    summary,
+    summary: summarySource.length > 320 ? `${summarySource.slice(0, 317).trim()}...` : summarySource,
     content,
     image_url: "",
+    metadata: {
+      releaseNotesSections,
+      releaseNotesUrl: url,
+      collectionUrl: MACOS_RELEASE_NOTES_COLLECTION_URL,
+      osName: "macOS Tahoe",
+      version,
+    },
   }];
 }
 
@@ -936,20 +1035,32 @@ export async function handler(req: Request): Promise<Response> {
         return parseCodeWeaversChangelog(await res.text());
       }));
 
-      const macOSReleaseNotesResult = await Promise.allSettled([MACOS_RELEASE_NOTES_URL].map(async (releaseNotesUrl) => {
-        const res = await fetch(releaseNotesUrl, {
+      const macOSReleaseNotesResult = await Promise.allSettled([MACOS_RELEASE_NOTES_COLLECTION_JSON_URL].map(async (collectionUrl) => {
+        const collectionRes = await fetch(collectionUrl, {
           headers: {
-            "Accept": "text/html",
+            "Accept": "application/json",
             "User-Agent": "MacReady/1.0",
           },
         });
-        if (!res.ok) throw new Error(`macOS release notes returned ${res.status}`);
-        return parseAppleMacOSReleaseNotes(await res.text());
+        if (!collectionRes.ok) throw new Error(`macOS release notes returned ${collectionRes.status}`);
+        const collection = await collectionRes.json();
+        const slug = releaseNotesSlugFromIdentifier(latestTahoeReleaseNote(collection));
+        if (!slug) return [];
+
+        const releaseNotesRes = await fetch(releaseNotesJsonUrlFromSlug(slug), {
+          headers: {
+            "Accept": "application/json",
+            "User-Agent": "MacReady/1.0",
+          },
+        });
+        if (!releaseNotesRes.ok) throw new Error(`macOS release notes returned ${releaseNotesRes.status}`);
+        return parseAppleMacOSReleaseNotes(await releaseNotesRes.json(), slug);
       }));
 
       const items = feedResults
         .concat(appChartResults, changelogResult, macOSReleaseNotesResult)
         .flatMap((result) => result.status === "fulfilled" ? result.value : [])
+        .filter((item) => item.category !== "Performance" || /\b(?:macOS\s+26|Tahoe)\b/i.test(`${item.title} ${item.summary}`))
         .filter((item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index)
         .sort((a, b) => {
           const aTime = a.published_at ? Date.parse(a.published_at) : 0;

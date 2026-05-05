@@ -133,6 +133,18 @@ export interface MacNewsItem {
     languageCodesISO2A?: string[];
     supportedDevices?: string[];
     advisories?: string[];
+    releaseNotesSections?: {
+      title: string;
+      level?: number;
+      items: {
+        kind?: "paragraph" | "listItem" | "heading";
+        text: string;
+        level?: number;
+      }[];
+    }[];
+    releaseNotesUrl?: string;
+    collectionUrl?: string;
+    osName?: string;
   };
 }
 

@@ -902,7 +902,7 @@ function HomeEditorialPage({ newsItems, isLoading }: { newsItems: MacNewsItem[];
                   )}
                   <div className="pt-0.5">
                     <p className="text-[10px] uppercase tracking-[0.24em] text-white/55">
-                      {leadArticle.category} · {leadArticle.source} {formatDate(leadArticle.published_at) && `· ${formatDate(leadArticle.published_at)}`}
+                      {NEWS_CATEGORY_LABELS[leadArticle.category]} · {leadArticle.source} {formatDate(leadArticle.published_at) && `· ${formatDate(leadArticle.published_at)}`}
                     </p>
                     <h2 className="mt-3 max-w-[680px] text-[31px] font-semibold leading-[1.05] tracking-tight text-white md:text-[42px]">
                       {leadArticle.title}
@@ -1204,6 +1204,7 @@ function ArticleReader({
   formatDate: (value?: string) => string;
 }) {
   const body = article.content ?? "";
+  const categoryLabel = NEWS_CATEGORY_LABELS[article.category];
 
   if (article.category === "App Store" && article.source === "Apple App Store") {
     return (
@@ -1211,10 +1212,16 @@ function ArticleReader({
     );
   }
 
+  if (article.category === "Performance" && article.source === "Apple Developer" && article.metadata?.releaseNotesSections?.length) {
+    return (
+      <MacOSReleaseNotesReader article={article} onBack={onBack} formatDate={formatDate} />
+    );
+  }
+
   return (
     <article className="mx-auto max-w-[1120px] pb-14">
       <button type="button" onClick={onBack} className="mb-6 text-[13px] text-white/44 transition-colors hover:text-white">
-        ← Back to {article.category.toLowerCase()}
+        ← Back to {categoryLabel}
       </button>
 
       <section className="grid items-start gap-7 md:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)]">
@@ -1227,7 +1234,7 @@ function ArticleReader({
         )}
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">
-            {article.category} · {article.source} {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
+            {categoryLabel} · {article.source} {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
           </p>
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.04] tracking-tight text-white md:text-[48px]">
             {article.title}
@@ -1245,6 +1252,109 @@ function ArticleReader({
           >
             Read original at {article.source}
           </a>
+        </div>
+      </section>
+    </article>
+  );
+}
+
+function MacOSReleaseNotesReader({
+  article,
+  onBack,
+  formatDate,
+}: {
+  article: MacNewsItem;
+  onBack: () => void;
+  formatDate: (value?: string) => string;
+}) {
+  const sections = article.metadata?.releaseNotesSections ?? [];
+  const version = article.metadata?.version ?? "";
+  const osName = article.metadata?.osName ?? "macOS Tahoe";
+
+  return (
+    <article className="mx-auto max-w-[1180px] pb-14">
+      <button type="button" onClick={onBack} className="mb-6 text-[13px] text-white/44 transition-colors hover:text-white">
+        ← Back to MacOS Updates
+      </button>
+
+      <section className="relative overflow-hidden rounded-[28px] bg-[#030303] ring-1 ring-white/[0.055]">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_26%),linear-gradient(90deg,rgba(255,255,255,0.035),transparent_34%)]" />
+
+        <div className="relative grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <aside className="px-7 py-8 md:px-9 lg:sticky lg:top-14 lg:h-[calc(100vh-92px)] lg:py-10">
+            <p className="text-[10px] uppercase tracking-[0.24em] text-white/36">
+              MacOS Updates · Apple Developer {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
+            </p>
+            <h1 className="mt-4 text-[34px] font-semibold leading-[1.02] tracking-tight text-white md:text-[46px]">
+              {article.title}
+            </h1>
+            {article.summary && (
+              <p className="mt-5 text-[15px] leading-7 text-white/52">
+                {article.summary}
+              </p>
+            )}
+            <dl className="mt-8 grid grid-cols-2 gap-3 text-[12px]">
+              <div className="rounded-[14px] bg-white/[0.035] p-4 ring-1 ring-white/[0.045]">
+                <dt className="text-white/34">System</dt>
+                <dd className="mt-1 font-medium text-white/78">{osName}</dd>
+              </div>
+              <div className="rounded-[14px] bg-white/[0.035] p-4 ring-1 ring-white/[0.045]">
+                <dt className="text-white/34">Version</dt>
+                <dd className="mt-1 font-medium text-white/78">{version}</dd>
+              </div>
+            </dl>
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-8 inline-flex h-8 items-center rounded-full bg-white/[0.055] px-4 text-[13px] font-medium text-white/62 ring-1 ring-white/[0.06] transition-colors hover:bg-white/[0.09] hover:text-white"
+            >
+              Apple Developer source
+            </a>
+          </aside>
+
+          <div className="relative min-w-0 px-4 pb-5 md:px-6 lg:px-0 lg:py-6 lg:pr-6">
+            <ScrollShadow className="max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 ring-1 ring-white/[0.055] md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]">
+              <div className="relative">
+                <div className="pointer-events-none sticky top-[-32px] z-10 -mx-8 h-24 bg-gradient-to-b from-[#030303] via-[#030303]/92 to-transparent" />
+                <div className="-mt-16 space-y-10">
+                  {sections.map((section, sectionIndex) => (
+                    <section
+                      key={`${section.title}-${sectionIndex}`}
+                      className="relative pl-5 before:absolute before:left-0 before:top-2 before:h-[calc(100%-8px)] before:w-px before:bg-white/[0.08]"
+                    >
+                      <h2 className="text-[22px] font-semibold tracking-tight text-white">
+                        {section.title}
+                      </h2>
+                      <div className="mt-5 space-y-4">
+                        {section.items.map((item, itemIndex) => {
+                          if (item.kind === "heading") {
+                            return (
+                              <h3 key={`${item.text}-${itemIndex}`} className="pt-3 text-[14px] font-semibold uppercase tracking-[0.16em] text-white/46">
+                                {item.text}
+                              </h3>
+                            );
+                          }
+                          if (item.kind === "listItem") {
+                            return (
+                              <p key={`${item.text}-${itemIndex}`} className="relative pl-5 text-[15px] leading-7 text-white/62 before:absolute before:left-0 before:top-[0.72em] before:size-1.5 before:rounded-full before:bg-white/34">
+                                {item.text}
+                              </p>
+                            );
+                          }
+                          return (
+                            <p key={`${item.text}-${itemIndex}`} className="text-[15px] leading-7 text-white/62">
+                              {item.text}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              </div>
+            </ScrollShadow>
+          </div>
         </div>
       </section>
     </article>
