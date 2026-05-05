@@ -1338,7 +1338,7 @@ function AppStoreFeed({
           </div>
         </div>
 
-        <div className="mb-7 max-w-[520px]">
+        <div className="mx-auto mb-7 w-full max-w-[520px]">
           <label className="relative block">
             <span className="absolute inset-y-0 left-4 z-10 flex items-center text-white/88">
               <svg
