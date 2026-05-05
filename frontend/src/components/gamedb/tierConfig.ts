@@ -11,7 +11,7 @@ export const TIER_CONFIG: Record<string, { label: string; color: string; bg: str
   "needs-workaround": { label: "Silver", color: "text-[#b3b3b3]", bg: "bg-[#b3b3b3]/10", border: "border-[#b3b3b3]/30", solidBg: "bg-[#b3b3b3]", description: "Needs workaround" },
   issues:          { label: "Bronze",    color: "text-[#cc6600]", bg: "bg-[#cc6600]/10", border: "border-[#cc6600]/30", solidBg: "bg-[#cc6600]", description: "Runs with notable issues" },
   broken:          { label: "Unplayable", color: "text-[#ff3333]", bg: "bg-[#ff3333]/10", border: "border-[#ff3333]/30", solidBg: "bg-[#ff3333]", description: "Unplayable" },
-  unsupported:     { label: "Unplayable", color: "text-[#ff3333]", bg: "bg-[#ff3333]/10", border: "border-[#ff3333]/30", solidBg: "bg-[#ff3333]", description: "Does not run" },
+  unsupported:     { label: "Unrated", color: "text-white/55", bg: "bg-white/8", border: "border-white/18", solidBg: "bg-white/55", description: "No compatibility report yet" },
 };
 
 export function getTierConfig(tier: string) {

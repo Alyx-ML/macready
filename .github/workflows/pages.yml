@@ -48,7 +48,7 @@ jobs:
           done
           mkdir -p frontend/public/data
           curl --fail --silent --show-error http://localhost:8421/api/v1/gamedb/news --output frontend/public/data/news.json
-          curl --fail --silent --show-error http://localhost:8421/api/v1/gamedb/steam/trending --output frontend/public/data/steam-trending.json
+          curl --fail --silent --show-error 'http://localhost:8421/api/v1/gamedb/steam/trending?details=1&limit=200' --output frontend/public/data/steam-trending.json
           kill "$backend_pid"
 
       - name: Build frontend

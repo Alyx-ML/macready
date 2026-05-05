@@ -1,4 +1,4 @@
-import type { Game, GameDetail, CreateGameRequest, AddTestRequest, IngestResult, User, UserHardware, SteamReviewSummary, MacNewsItem } from "../types/gamedb";
+import type { Game, GameDetail, CreateGameRequest, AddTestRequest, IngestResult, User, UserHardware, SteamReviewSummary, MacNewsItem, SteamMetadata } from "../types/gamedb";
 
 const BASE = "/api/v1/gamedb";
 const STATIC_DATA_BASE = `${import.meta.env.BASE_URL}data`;
@@ -18,6 +18,8 @@ export type SteamCatalogItem = {
   compatibility_reasons?: string[];
   feed?: "featured" | "top_sellers" | "new_releases";
   feed_rank?: number;
+  steam?: SteamMetadata | null;
+  reviews?: SteamReviewSummary | null;
 };
 
 function getToken(): string | null {
@@ -119,26 +121,32 @@ export async function getGame(id: number): Promise<GameDetail> {
     }
     const tier = item.compatibility_tier as Game["aggregate_tier"] || "unsupported";
     const game = steamItemToGame(item, itemIndex);
+    const steam = item.steam ? {
+      ...item.steam,
+      header_image: item.steam.header_image || item.cover_art_url,
+      capsule_image: item.steam.capsule_image || item.cover_art_url,
+      store_url: item.steam.store_url || game.store_url,
+    } : {
+      steam_app_id: item.steam_app_id,
+      description: item.description,
+      genres: item.genres,
+      store_url: game.store_url,
+      header_image: item.cover_art_url,
+      capsule_image: item.cover_art_url,
+      mac_native: Boolean(item.mac_native),
+      crossover_playable: Boolean(item.crossover_playable),
+      compatibility_tier: tier,
+      compatibility_label: item.compatibility_label,
+      compatibility_reasons: item.compatibility_reasons,
+      platforms: {
+        windows: true,
+        mac: Boolean(item.mac_native),
+        linux: false,
+      },
+    };
     return {
       game,
-      steam: {
-        steam_app_id: item.steam_app_id,
-        description: item.description,
-        genres: item.genres,
-        store_url: game.store_url,
-        header_image: item.cover_art_url,
-        capsule_image: item.cover_art_url,
-        mac_native: Boolean(item.mac_native),
-        crossover_playable: Boolean(item.crossover_playable),
-        compatibility_tier: tier,
-        compatibility_label: item.compatibility_label,
-        compatibility_reasons: item.compatibility_reasons,
-        platforms: {
-          windows: true,
-          mac: Boolean(item.mac_native),
-          linux: false,
-        },
-      },
+      steam,
       tests: [],
       aggregate: {
         tier,
@@ -152,6 +160,14 @@ export async function getGame(id: number): Promise<GameDetail> {
 }
 
 export async function getSteamReviews(appId: string): Promise<SteamReviewSummary> {
+  if (USE_STATIC_DATA) {
+    const data = await fetchStaticJSON<{ items: SteamCatalogItem[] }>("steam-trending.json");
+    const item = data.items.find((candidate) => candidate.steam_app_id === appId);
+    if (!item?.reviews) {
+      throw new Error(`Static Steam reviews not found: ${appId}`);
+    }
+    return item.reviews;
+  }
   const data = await fetchJSON<{ reviews: SteamReviewSummary }>(`${BASE}/steam/reviews?app_id=${encodeURIComponent(appId)}`);
   return data.reviews;
 }

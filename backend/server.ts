@@ -1049,9 +1049,32 @@ async function handler(req: Request): Promise<Response> {
         });
       };
 
-      const items = (await Promise.all(feeds.map(parseFeed))).flat();
+      const items = (await Promise.all(feeds.map(parseFeed))).flat().slice(0, 200);
+      if (url.searchParams.get("details") === "1") {
+        const limit = Math.min(Number(url.searchParams.get("limit")) || 80, items.length);
+        const detailedItems = await Promise.all(items.slice(0, limit).map(async (item) => {
+          const [steam, reviews] = await Promise.all([
+            getSteamMetadata(item.steam_app_id),
+            getSteamReviewSummary(item.steam_app_id),
+          ]);
+          return {
+            ...item,
+            cover_art_url: steam?.header_image || item.cover_art_url,
+            description: steam?.description || "",
+            genres: steam?.genres || [],
+            mac_native: Boolean(steam?.mac_native),
+            crossover_playable: Boolean(steam?.crossover_playable),
+            compatibility_tier: steam?.compatibility_tier,
+            compatibility_label: steam?.compatibility_label || "Unrated",
+            compatibility_reasons: steam?.compatibility_reasons || [],
+            steam,
+            reviews,
+          };
+        }));
+        return json({ items: detailedItems });
+      }
 
-      return json({ items: items.slice(0, 200) });
+      return json({ items });
     } catch (e: any) { return err(e.message, 500); }
   }
 
