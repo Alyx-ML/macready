@@ -367,6 +367,11 @@ export function GameDB() {
               <HomeEditorialPage
                 newsItems={macNews ?? []}
                 isLoading={isMacNewsLoading}
+                onOpenCompatibility={() => runPageCrossfade(() => {
+                  setDetailId(null);
+                  setShowAccountPage(false);
+                  setMainView("compatibility");
+                }, () => window.scrollTo({ top: 0, behavior: "auto" }))}
               />
             ) : (
               <GameListView
@@ -792,7 +797,7 @@ const NEWS_CATEGORY_ICONS: Partial<Record<MacNewsCategory, LucideIcon>> = {
   "Top Lists": ListOrdered,
 };
 
-function HomeEditorialPage({ newsItems, isLoading }: { newsItems: MacNewsItem[]; isLoading: boolean }) {
+function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { newsItems: MacNewsItem[]; isLoading: boolean; onOpenCompatibility: () => void }) {
   const [activeCategory, setActiveCategory] = useState<MacNewsCategory>("News");
   const [selectedArticle, setSelectedArticle] = useState<MacNewsItem | null>(null);
   const [visibleArticleCount, setVisibleArticleCount] = useState(6);
@@ -852,15 +857,15 @@ function HomeEditorialPage({ newsItems, isLoading }: { newsItems: MacNewsItem[];
       <div className="mx-auto max-w-[1420px]">
         <header className="flex justify-center pt-2 pb-7">
           <nav
-            className="flex w-full max-w-[760px] items-center justify-center gap-7 px-4 text-[14px] sm:gap-10"
+            className="flex w-full max-w-[900px] items-center justify-center gap-5 px-4 text-[14px] sm:gap-8"
             aria-label="MacReady news categories"
           >
             {NEWS_CATEGORIES.map((category) => {
               const active = category === activeCategory;
               const label = NEWS_CATEGORY_LABELS[category];
               return (
+                <span key={category} className="contents">
                 <button
-                  key={category}
                   type="button"
                   onClick={() => selectCategory(category)}
                   title={label}
@@ -880,6 +885,19 @@ function HomeEditorialPage({ newsItems, isLoading }: { newsItems: MacNewsItem[];
                     ].join(" ")}
                   />
                 </button>
+                {category === "CrossOver" && (
+                  <button
+                    type="button"
+                    onClick={onOpenCompatibility}
+                    title="Compatibility"
+                    aria-label="Compatibility"
+                    className="group relative inline-flex h-8 items-center whitespace-nowrap pb-1 text-white/50 transition-colors duration-200 hover:text-white/80"
+                  >
+                    <span>Compatibility</span>
+                    <span className="absolute bottom-0 left-0 h-px w-0 bg-white opacity-0 transition-all duration-200 group-hover:w-full group-hover:opacity-32" />
+                  </button>
+                )}
+                </span>
               );
             })}
           </nav>
@@ -1702,8 +1720,15 @@ function CrossoverChangelogPanel({
         </aside>
 
         <div className="relative min-w-0 px-4 pb-5 md:px-6 lg:px-0 lg:py-6 lg:pr-6">
+          <img
+            src={`${import.meta.env.BASE_URL}imgs/crossover-icon.webp`}
+            alt=""
+            className="pointer-events-none absolute bottom-10 right-10 z-[1] hidden w-[190px] opacity-[0.055] mix-blend-screen md:block lg:right-14"
+            loading="lazy"
+            decoding="async"
+          />
           <div
-            className="release-notes-scroll max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
+            className="release-notes-scroll relative z-10 max-h-[72vh] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8 lg:max-h-[calc(100vh-116px)]"
             style={{
               WebkitOverflowScrolling: "touch",
               overscrollBehavior: "contain",
