@@ -1431,7 +1431,7 @@ function MacOSReleaseNotesPanel({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_26%),linear-gradient(90deg,rgba(255,255,255,0.035),transparent_34%)]" />
 
       <div className="relative grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="px-7 py-8 md:px-9 lg:sticky lg:top-14 lg:h-[calc(100vh-92px)] lg:py-10">
+        <aside className="px-7 py-8 md:px-9 lg:py-10">
           <p className="text-[10px] uppercase tracking-[0.24em] text-white/36">
             MacOS Updates · Apple Developer {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
           </p>
