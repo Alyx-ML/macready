@@ -211,6 +211,7 @@ export function GameDB() {
         macos_version: macosFilter || undefined,
         hardware: hwFilter || undefined,
       }),
+    enabled: mainView === "compatibility" || detailId !== null,
   });
   const { data: macNews, isLoading: isMacNewsLoading } = useQuery({
     queryKey: ["gamedb", "mac-news"],
@@ -219,18 +220,20 @@ export function GameDB() {
   });
   
   useEffect(() => {
+    if (isStaticDataMode) return;
     getMe().then((data: any) => {
       if (data) setUser(data.user);
     });
   }, []);
 
   useEffect(() => {
+    if (mainView !== "compatibility") return;
     getSteamTrending()
       .then((items) => {
         setTrendingSteam(items.filter((item: SteamCatalogItem) => hasSteamCover(item) && !isAdultSteamItem(item) && !isNonGameSteamItem(item)));
       })
       .catch(err => console.error("Failed to fetch trending:", err));
-  }, []);
+  }, [mainView]);
 
   useEffect(() => {
     if (!search.trim()) { setSteamResults([]); return; }
@@ -271,9 +274,10 @@ export function GameDB() {
     setAddingSteamId(null);
   };
 
-  const { data: distinctWine } = useQuery({ queryKey: ["gamedb", "distinct", "wine_version"], queryFn: () => getDistinctValues("wine_version"), staleTime: 60_000 });
-  const { data: distinctMacos } = useQuery({ queryKey: ["gamedb", "distinct", "macos_version"], queryFn: () => getDistinctValues("macos_version"), staleTime: 60_000 });
-  const { data: distinctHw } = useQuery({ queryKey: ["gamedb", "distinct", "hardware"], queryFn: () => getDistinctValues("hardware"), staleTime: 60_000 });
+  const enableCompatibilityData = mainView === "compatibility";
+  const { data: distinctWine } = useQuery({ queryKey: ["gamedb", "distinct", "wine_version"], queryFn: () => getDistinctValues("wine_version"), staleTime: 60_000, enabled: enableCompatibilityData });
+  const { data: distinctMacos } = useQuery({ queryKey: ["gamedb", "distinct", "macos_version"], queryFn: () => getDistinctValues("macos_version"), staleTime: 60_000, enabled: enableCompatibilityData });
+  const { data: distinctHw } = useQuery({ queryKey: ["gamedb", "distinct", "hardware"], queryFn: () => getDistinctValues("hardware"), staleTime: 60_000, enabled: enableCompatibilityData });
 
   const pageViewKey = [pageTransitionKey, showAccountPage ? "account" : detailId !== null ? `game-${detailId}` : mainView].join(":");
 

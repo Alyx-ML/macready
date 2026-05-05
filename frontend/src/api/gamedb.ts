@@ -4,6 +4,7 @@ const BASE = "/api/v1/gamedb";
 const STATIC_DATA_BASE = `${import.meta.env.BASE_URL}data`;
 const USE_STATIC_DATA = import.meta.env.VITE_GITHUB_PAGES_DATA === "true";
 export const isStaticDataMode = USE_STATIC_DATA;
+const staticJSONCache = new Map<string, Promise<unknown>>();
 
 export type SteamCatalogItem = {
   name: string;
@@ -45,11 +46,15 @@ async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 async function fetchStaticJSON<T>(fileName: string): Promise<T> {
+  const cached = staticJSONCache.get(fileName);
+  if (cached) return cached as Promise<T>;
   const res = await fetch(`${STATIC_DATA_BASE}/${fileName}`);
   if (!res.ok) {
     throw new Error(`Static data error ${res.status}: ${fileName}`);
   }
-  return res.json();
+  const promise = res.json() as Promise<T>;
+  staticJSONCache.set(fileName, promise);
+  return promise;
 }
 
 function steamItemToGame(item: SteamCatalogItem, index: number): Game {
