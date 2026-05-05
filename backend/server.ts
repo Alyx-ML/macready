@@ -60,6 +60,18 @@ const APP_STORE_CHARTS = [
 
 const CROSSOVER_CHANGELOG_URL = "https://www.codeweavers.com/crossover/changelog?srsltid=AfmBOorPYli8YCpEdYHmbTEjgbAzDcmIfaeIXKkRoAY4iWSDz4jRQlo4";
 const MACOS_RELEASE_NOTES_URL = "https://developer.apple.com/documentation/macos-release-notes/macos-26_5-release-notes";
+const STEAM_SEARCH_INDEX_TERMS = [
+  "half life", "portal", "counter strike", "left 4 dead", "team fortress",
+  "baldur", "cyberpunk", "elden ring", "stardew", "terraria", "hades",
+  "civilization", "total war", "resident evil", "final fantasy", "persona",
+  "yakuza", "tekken", "street fighter", "monster hunter", "dark souls",
+  "no mans sky", "subnautica", "rimworld", "factorio", "satisfactory",
+  "cities skylines", "crusader kings", "hearts of iron", "stellaris",
+  "disco elysium", "hollow knight", "celeste", "dead cells", "vampire survivors",
+  "dave the diver", "palworld", "valheim", "warframe", "apex legends",
+  "fallout", "doom", "quake", "bioshock", "tomb raider", "hitman",
+  "witcher", "metro", "borderlands", "mass effect", "dragon age",
+];
 
 const MAC_NEWS_PATTERNS = [
   /\bmac\b/i,
@@ -539,6 +551,30 @@ function statusMatches(requested: string, tier: string) {
   return requested === tier;
 }
 
+function normalizeSteamCatalogText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9+]+/g, " ").trim();
+}
+
+function shouldHideSteamCatalogName(name: string) {
+  const haystack = normalizeSteamCatalogText(name);
+  if (!haystack || haystack.length < 2) return true;
+  const tokens = new Set(haystack.split(/\s+/).filter(Boolean));
+  const blockedNames = new Set(["steam controller", "steam deck", "steam link"]);
+  const blockedTerms = [
+    "ahegao", "bdsm", "boobs", "breast", "brothel", "busty",
+    "ecchi", "eroge", "erotic", "femboy", "futa", "futanari",
+    "harem", "hentai", "incest", "lewd", "milf", "nsfw",
+    "nude", "nudity", "porn", "pornographic", "seduce", "sex",
+    "sexual", "sexy", "succubus", "tentacle", "waifu", "yuri",
+    "soundtrack", "dedicated server", "playtest", "trailer", "demo",
+  ];
+  const blockedPhrases = [
+    "steam deck", "steam controller", "docking station", "erotic visual novel",
+    "sexual content", "adult only", "ai generated", "ai girlfriend",
+  ];
+  return blockedNames.has(haystack) || blockedTerms.some((term) => tokens.has(term)) || blockedPhrases.some((phrase) => haystack.includes(phrase));
+}
+
 async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
@@ -966,6 +1002,44 @@ async function handler(req: Request): Promise<Response> {
       const reviews = await getSteamReviewSummary(appId);
       if (!reviews) return err("Steam review summary unavailable", 404);
       return json({ reviews });
+    } catch (e: any) {
+      return err(e.message, 500);
+    }
+  }
+
+  // ── GET /api/v1/gamedb/steam/search-index ─────────────────────────
+  if (method === "GET" && path === "/api/v1/gamedb/steam/search-index") {
+    try {
+      const seen = new Set<string>();
+      const searchResults = await Promise.all(STEAM_SEARCH_INDEX_TERMS.map(async (term) => {
+        const res = await fetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(term)}&l=english&cc=US`, {
+          headers: {
+            "Accept": "application/json",
+            "User-Agent": "MacReady/1.0",
+          },
+        });
+        if (!res.ok) return [];
+        const payload = await res.json() as any;
+        return payload.items || [];
+      }));
+      const items = [];
+      for (const results of searchResults) {
+        for (const app of results) {
+          const id = String(app.id || "");
+          const name = typeof app.name === "string" ? app.name.trim() : "";
+          if (!id || !name || seen.has(id) || shouldHideSteamCatalogName(name)) continue;
+          seen.add(id);
+          items.push({
+            name,
+            steam_app_id: id,
+            cover_art_url: app.tiny_image || getSteamCoverUrl(id),
+            compatibility_tier: "unsupported",
+            compatibility_label: "Unrated",
+            compatibility_reasons: [],
+          });
+        }
+      }
+      return json({ items });
     } catch (e: any) {
       return err(e.message, 500);
     }

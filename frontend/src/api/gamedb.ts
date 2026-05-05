@@ -82,6 +82,13 @@ function itemMatchesSearch(item: SteamCatalogItem, search?: string): boolean {
   ].filter(Boolean).join(" ").toLowerCase().includes(query);
 }
 
+function mergeSteamItems(primary: SteamCatalogItem[], secondary: SteamCatalogItem[]): SteamCatalogItem[] {
+  const byId = new Map<string, SteamCatalogItem>();
+  for (const item of secondary) byId.set(item.steam_app_id, item);
+  for (const item of primary) byId.set(item.steam_app_id, { ...byId.get(item.steam_app_id), ...item });
+  return Array.from(byId.values());
+}
+
 // ── Games ───────────────────────────────────────────────────────────
 export async function listGames(params?: {
   search?: string;
@@ -114,8 +121,10 @@ export async function createGame(req: CreateGameRequest): Promise<{ id: number }
 export async function getGame(id: number): Promise<GameDetail> {
   if (USE_STATIC_DATA) {
     const data = await fetchStaticJSON<{ items: SteamCatalogItem[] }>("steam-trending.json");
-    const itemIndex = data.items.findIndex((candidate) => Number(candidate.steam_app_id) === id);
-    const item = data.items[itemIndex];
+    const searchData = await fetchStaticJSON<{ items: SteamCatalogItem[] }>("steam-search-index.json");
+    const allItems = mergeSteamItems(data.items, searchData.items);
+    const itemIndex = allItems.findIndex((candidate) => Number(candidate.steam_app_id) === id);
+    const item = allItems[itemIndex];
     if (!item) {
       throw new Error(`Static game not found: ${id}`);
     }
@@ -193,7 +202,10 @@ export async function getSteamTrending(): Promise<SteamCatalogItem[]> {
 export async function searchSteamCatalog(params: { q: string; status?: string }): Promise<SteamCatalogItem[]> {
   if (USE_STATIC_DATA) {
     const data = await fetchStaticJSON<{ items: SteamCatalogItem[] }>("steam-trending.json");
-    return data.items.filter((item) => itemMatchesSearch(item, params.q) && itemMatchesStatus(item, params.status));
+    const searchData = await fetchStaticJSON<{ items: SteamCatalogItem[] }>("steam-search-index.json");
+    return mergeSteamItems(data.items, searchData.items)
+      .filter((item) => itemMatchesSearch(item, params.q) && itemMatchesStatus(item, params.status))
+      .slice(0, 24);
   }
   const sp = new URLSearchParams({ q: params.q });
   if (params.status) sp.set("status", params.status);
