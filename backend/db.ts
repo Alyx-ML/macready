@@ -3,7 +3,7 @@ import { join } from "path";
 import { mkdirSync } from "fs";
 
 export function getDB(projectDir: string): Database {
-  const dbDir = join(projectDir, ".gamedb");
+  const dbDir = process.env.GAMEDB_DIR || join(projectDir, ".gamedb");
   mkdirSync(dbDir, { recursive: true });
   
   const db = new Database(join(dbDir, "games.db"), { create: true });

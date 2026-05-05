@@ -2,7 +2,7 @@ import { serve } from "bun";
 import { getDB } from "./db.ts";
 import { handleAgentCommand } from "./agent.ts";
 import { join } from "path";
-import { statSync } from "fs";
+import { statSync, watch } from "fs";
 
 const PROJECT_DIR = process.argv[2] || process.cwd();
 const BASE_PORT = parseInt(process.env.PORT || "8421");
@@ -575,7 +575,7 @@ function shouldHideSteamCatalogName(name: string) {
   return blockedNames.has(haystack) || blockedTerms.some((term) => tokens.has(term)) || blockedPhrases.some((phrase) => haystack.includes(phrase));
 }
 
-async function handler(req: Request): Promise<Response> {
+export async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
   const method = req.method;
@@ -1187,32 +1187,30 @@ async function handler(req: Request): Promise<Response> {
   return new Response(Bun.file(index), { headers: CORS });
 }
 
-// ── Auto-Build Watcher (Dev Only) ──────────────────────────────────
-import { watch } from "fs";
+if (import.meta.main) {
+  let isBuilding = false;
+  const build = async () => {
+    if (isBuilding) return;
+    isBuilding = true;
+    console.log("[Auto-Build] Building frontend...");
+    const proc = Bun.spawn(["bun", "run", "build"], {
+      cwd: join(PROJECT_DIR, "frontend"),
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    await proc.exited;
+    console.log("[Auto-Build] Build complete.");
+    isBuilding = false;
+  };
 
-let isBuilding = false;
-const build = async () => {
-  if (isBuilding) return;
-  isBuilding = true;
-  console.log("[Auto-Build] 🛠️ Building frontend...");
-  const proc = Bun.spawn(["bun", "run", "build"], {
-    cwd: join(PROJECT_DIR, "frontend"),
-    stdout: "inherit",
-    stderr: "inherit",
+  build();
+
+  watch(join(PROJECT_DIR, "frontend/src"), { recursive: true }, (event, filename) => {
+    if (filename && (filename.endsWith(".tsx") || filename.endsWith(".ts") || filename.endsWith(".css"))) {
+      build();
+    }
   });
-  await proc.exited;
-  console.log("[Auto-Build] ✅ Build complete.");
-  isBuilding = false;
-};
 
-// Force initial build on startup to ensure latest code is served
-build();
-
-const watcher = watch(join(PROJECT_DIR, "frontend/src"), { recursive: true }, (event, filename) => {
-  if (filename && (filename.endsWith(".tsx") || filename.endsWith(".ts") || filename.endsWith(".css"))) {
-    build();
-  }
-});
-
-serve({ port: BASE_PORT, fetch: handler });
-console.log(`dac server (Bun) listening on http://localhost:${BASE_PORT}`);
+  serve({ port: BASE_PORT, fetch: handler });
+  console.log(`dac server (Bun) listening on http://localhost:${BASE_PORT}`);
+}
