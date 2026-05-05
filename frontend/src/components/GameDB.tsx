@@ -1453,11 +1453,13 @@ function ArticleReader({
   );
 }
 
-function ArticleBodyScroll({ paragraphs }: { paragraphs: string[] }) {
+function ArticleBodyScroll({ paragraphs, compact = false }: { paragraphs: string[]; compact?: boolean }) {
   return (
-    <div className="relative mt-6">
+    <div className={compact ? "relative mt-4" : "relative mt-6"}>
       <div
-        className="release-notes-scroll max-h-[min(620px,calc(100vh-180px))] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8"
+        className={compact
+          ? "release-notes-scroll max-h-[180px] overflow-y-auto rounded-[20px] bg-black/[0.34] px-5 py-4 md:px-7 md:py-5"
+          : "release-notes-scroll max-h-[min(620px,calc(100vh-180px))] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8"}
         style={{
           WebkitOverflowScrolling: "touch",
           overscrollBehavior: "contain",
@@ -1466,14 +1468,18 @@ function ArticleBodyScroll({ paragraphs }: { paragraphs: string[] }) {
       >
         <div className="space-y-5">
           {paragraphs.map((paragraph, index) => (
-            <p key={`${paragraph.slice(0, 28)}-${index}`} className="text-[16px] leading-8 text-white/62">
+            <p key={`${paragraph.slice(0, 28)}-${index}`} className={compact ? "text-[15px] leading-7 text-white/62" : "text-[16px] leading-8 text-white/62"}>
               {paragraph}
             </p>
           ))}
         </div>
       </div>
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-[24px] bg-gradient-to-b from-[#030303] via-[#030303]/70 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[24px] bg-gradient-to-t from-[#030303] via-[#030303]/70 to-transparent" />
+      {!compact && (
+        <>
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-[24px] bg-gradient-to-b from-[#030303] via-[#030303]/70 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[24px] bg-gradient-to-t from-[#030303] via-[#030303]/70 to-transparent" />
+        </>
+      )}
     </div>
   );
 }
@@ -1813,6 +1819,7 @@ function AppStoreArticleReader({
   const releaseNotes = typeof metadata.releaseNotes === "string" ? metadata.releaseNotes : "";
   const bodyParagraphs = formatArticleParagraphs(body);
   const releaseNoteParagraphs = formatArticleParagraphs(releaseNotes);
+  const hasBriefReleaseNotes = releaseNoteParagraphs.length === 1 && releaseNoteParagraphs[0].length < 180;
 
   const summaryRows = [
     formattedPrice ? ["Price", formattedPrice] : null,
@@ -1920,7 +1927,7 @@ function AppStoreArticleReader({
               {releaseNoteParagraphs.length > 0 && (
                 <div className="mt-8 border-t border-white/[0.055] pt-6">
                   <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Latest version notes</p>
-                  <ArticleBodyScroll paragraphs={releaseNoteParagraphs} />
+                  <ArticleBodyScroll paragraphs={releaseNoteParagraphs} compact={hasBriefReleaseNotes} />
                 </div>
               )}
               {screenshots.length > 0 && (
