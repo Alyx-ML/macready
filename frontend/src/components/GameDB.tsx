@@ -12,7 +12,7 @@ import { AccountPage } from "./gamedb/AccountPage";
 import { TopNavbar } from "./gamedb/TopNavbar";
 import { LiquidGlass } from "./gamedb/LiquidGlass";
 import { getTierConfig, NEW_TIERS } from "./gamedb/tierConfig";
-import { Apple, Gamepad2, ListOrdered, ScrollText, ShoppingBag, Star, type LucideIcon } from "lucide-react";
+import { Apple, ChevronLeft, ChevronRight, Gamepad2, ListOrdered, ScrollText, ShoppingBag, Star, type LucideIcon } from "lucide-react";
 
 type MainView = "home" | "compatibility";
 
@@ -1820,6 +1820,40 @@ function AppStoreArticleReader({
   const bodyParagraphs = formatArticleParagraphs(body);
   const releaseNoteParagraphs = formatArticleParagraphs(releaseNotes);
   const hasBriefReleaseNotes = releaseNoteParagraphs.length === 1 && releaseNoteParagraphs[0].length < 180;
+  const screenshotTrackRef = useRef<HTMLDivElement>(null);
+  const [activeScreenshotIndex, setActiveScreenshotIndex] = useState(0);
+  const goToScreenshot = useCallback((index: number) => {
+    const nextIndex = Math.max(0, Math.min(index, screenshots.length - 1));
+    const track = screenshotTrackRef.current;
+    const slide = track?.children[nextIndex] as HTMLElement | undefined;
+
+    setActiveScreenshotIndex(nextIndex);
+    slide?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [screenshots.length]);
+  const handleScreenshotScroll = useCallback(() => {
+    const track = screenshotTrackRef.current;
+
+    if (!track) {
+      return;
+    }
+
+    const targetCenter = track.scrollLeft + track.clientWidth / 2;
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    Array.from(track.children).forEach((child, index) => {
+      const slide = child as HTMLElement;
+      const slideCenter = slide.offsetLeft + slide.offsetWidth / 2;
+      const distance = Math.abs(slideCenter - targetCenter);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    setActiveScreenshotIndex((currentIndex) => currentIndex === closestIndex ? currentIndex : closestIndex);
+  }, []);
 
   const summaryRows = [
     formattedPrice ? ["Price", formattedPrice] : null,
@@ -1933,11 +1967,61 @@ function AppStoreArticleReader({
               {screenshots.length > 0 && (
                 <div className="mt-9 border-t border-white/[0.055] pt-6">
                   <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Screenshots</p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div
+                    ref={screenshotTrackRef}
+                    onScroll={handleScreenshotScroll}
+                    className="-mx-2 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-2 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  >
                     {screenshots.map((src) => (
-                      <img key={src} src={src} alt="" loading="lazy" decoding="async" className="aspect-[16/10] w-full rounded-[18px] object-cover opacity-85" />
+                      <div
+                        key={src}
+                        className="min-w-[82%] snap-center overflow-hidden rounded-[24px] bg-white/[0.025] ring-1 ring-white/[0.07] sm:min-w-[68%] lg:min-w-[58%]"
+                      >
+                        <img
+                          src={src}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="aspect-[16/10] w-full object-cover opacity-90"
+                        />
+                      </div>
                     ))}
                   </div>
+                  {screenshots.length > 1 && (
+                    <div className="mt-1 flex items-center justify-between">
+                      <div className="flex gap-1.5">
+                        {screenshots.map((src, index) => (
+                          <button
+                            key={`${src}-dot`}
+                            type="button"
+                            aria-label={`Show screenshot ${index + 1}`}
+                            onClick={() => goToScreenshot(index)}
+                            className={`h-1.5 rounded-full transition-all ${activeScreenshotIndex === index ? "w-5 bg-white/72" : "w-1.5 bg-white/22 hover:bg-white/42"}`}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          aria-label="Previous screenshot"
+                          onClick={() => goToScreenshot(activeScreenshotIndex - 1)}
+                          disabled={activeScreenshotIndex === 0}
+                          className="inline-flex size-8 items-center justify-center rounded-full bg-white/[0.07] text-white/72 ring-1 ring-white/[0.08] transition-colors hover:bg-white/[0.12] hover:text-white disabled:cursor-default disabled:opacity-30 disabled:hover:bg-white/[0.07] disabled:hover:text-white/72"
+                        >
+                          <ChevronLeft className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Next screenshot"
+                          onClick={() => goToScreenshot(activeScreenshotIndex + 1)}
+                          disabled={activeScreenshotIndex === screenshots.length - 1}
+                          className="inline-flex size-8 items-center justify-center rounded-full bg-white/[0.07] text-white/72 ring-1 ring-white/[0.08] transition-colors hover:bg-white/[0.12] hover:text-white disabled:cursor-default disabled:opacity-30 disabled:hover:bg-white/[0.07] disabled:hover:text-white/72"
+                        >
+                          <ChevronRight className="size-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
           </div>
