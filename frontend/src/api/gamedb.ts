@@ -94,6 +94,82 @@ function mergeSteamItems(primary: SteamCatalogItem[], secondary: SteamCatalogIte
   return Array.from(byId.values());
 }
 
+function parseAppleAppResult(app: any, index: number, searchTerm: string): MacNewsItem | null {
+  const appId = String(app.trackId || "");
+  const name = String(app.trackName || "");
+  const url = String(app.trackViewUrl || "");
+  if (!appId || !name || !url) return null;
+
+  const maker = String(app.artistName || "");
+  const genres = Array.isArray(app.genres) ? app.genres.filter(Boolean).map(String) : [];
+  const genreText = genres.length > 0 ? ` It is listed under ${genres.slice(0, 3).join(", ")}.` : "";
+  const summary = maker
+    ? `${name} by ${maker} matched "${searchTerm}" on the Mac App Store.${genreText}`
+    : `${name} matched "${searchTerm}" on the Mac App Store.${genreText}`;
+
+  return {
+    id: `Apple App Store Search:${appId}:${index}`,
+    title: name,
+    url,
+    source: "Apple App Store",
+    category: "App Store",
+    published_at: String(app.currentVersionReleaseDate || app.releaseDate || new Date().toISOString()),
+    summary,
+    content: summary,
+    image_url: String(app.artworkUrl512 || app.artworkUrl100 || ""),
+    metadata: {
+      maker,
+      sellerName: String(app.sellerName || ""),
+      description: String(app.description || ""),
+      releaseNotes: String(app.releaseNotes || ""),
+      formattedPrice: String(app.formattedPrice || ""),
+      price: typeof app.price === "number" ? app.price : undefined,
+      currency: String(app.currency || ""),
+      averageUserRating: typeof app.averageUserRating === "number" ? app.averageUserRating : undefined,
+      userRatingCount: typeof app.userRatingCount === "number" ? app.userRatingCount : undefined,
+      trackContentRating: String(app.trackContentRating || ""),
+      advisory: String(app.trackContentRating || ""),
+      minimumOsVersion: String(app.minimumOsVersion || ""),
+      version: String(app.version || ""),
+      currentVersionReleaseDate: String(app.currentVersionReleaseDate || ""),
+      releaseDate: String(app.releaseDate || ""),
+      fileSizeBytes: String(app.fileSizeBytes || ""),
+      genres,
+      kind: String(app.kind || ""),
+      screenshotUrls: Array.isArray(app.screenshotUrls) ? app.screenshotUrls.filter(Boolean) : [],
+      ipadScreenshotUrls: Array.isArray(app.ipadScreenshotUrls) ? app.ipadScreenshotUrls.filter(Boolean) : [],
+      languageCodesISO2A: Array.isArray(app.languageCodesISO2A) ? app.languageCodesISO2A.filter(Boolean) : [],
+      supportedDevices: Array.isArray(app.supportedDevices) ? app.supportedDevices.filter(Boolean) : [],
+      advisories: Array.isArray(app.advisories) ? app.advisories.filter(Boolean) : [],
+      artistUrl: String(app.artistViewUrl || ""),
+      appId,
+      chartTitle: "Mac App Store Search",
+    },
+  };
+}
+
+function fetchAppleSearchJsonp(url: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const callbackName = `macreadyAppStoreSearch_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement("script");
+    const cleanup = () => {
+      delete (window as any)[callbackName];
+      script.remove();
+    };
+
+    (window as any)[callbackName] = (payload: any) => {
+      cleanup();
+      resolve(payload);
+    };
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Apple search failed"));
+    };
+    script.src = `${url}&callback=${encodeURIComponent(callbackName)}`;
+    document.head.appendChild(script);
+  });
+}
+
 // ── Games ───────────────────────────────────────────────────────────
 export async function listGames(params?: {
   search?: string;
@@ -229,6 +305,28 @@ export async function getAppStoreDetails(appId: string): Promise<Partial<MacNews
   }
   const data = await fetchJSON<{ details: Partial<MacNewsItem> }>(`${BASE}/appstore/lookup?app_id=${encodeURIComponent(appId)}`);
   return data.details;
+}
+
+export async function searchAppStore(params: { q: string }): Promise<MacNewsItem[]> {
+  const q = params.q.trim();
+  if (!q) return [];
+
+  if (USE_STATIC_DATA) {
+    const apiUrl = new URL("https://itunes.apple.com/search");
+    apiUrl.searchParams.set("term", q);
+    apiUrl.searchParams.set("country", "us");
+    apiUrl.searchParams.set("media", "software");
+    apiUrl.searchParams.set("entity", "macSoftware");
+    apiUrl.searchParams.set("limit", "24");
+    const payload = await fetchAppleSearchJsonp(apiUrl.toString());
+    return (Array.isArray(payload?.results) ? payload.results : [])
+      .map((app: any, index: number) => parseAppleAppResult(app, index, q))
+      .filter((item: MacNewsItem | null): item is MacNewsItem => Boolean(item));
+  }
+
+  const sp = new URLSearchParams({ q });
+  const data = await fetchJSON<{ items: MacNewsItem[] }>(`${BASE}/appstore/search?${sp.toString()}`);
+  return data.items;
 }
 
 export async function updateGame(id: number, req: CreateGameRequest): Promise<void> {

@@ -277,6 +277,34 @@ function parseAppleAppLookup(payload: any) {
   };
 }
 
+function parseAppleAppSearchResult(app: any, index: number, searchTerm: string) {
+  const details = parseAppleAppLookup({ results: [app] });
+  if (!details?.metadata?.appId || !details.title || !details.url) return null;
+
+  const maker = details.metadata.maker || "";
+  const genres = details.metadata.genres || [];
+  const genreText = genres.length > 0 ? ` It is listed under ${genres.slice(0, 3).join(", ")}.` : "";
+  const summary = maker
+    ? `${details.title} by ${maker} matched "${searchTerm}" on the Mac App Store.${genreText}`
+    : `${details.title} matched "${searchTerm}" on the Mac App Store.${genreText}`;
+
+  return {
+    id: `Apple App Store Search:${details.metadata.appId}:${index}`,
+    title: details.title,
+    url: details.url,
+    source: "Apple App Store",
+    category: "App Store" as MacNewsCategory,
+    published_at: details.metadata.currentVersionReleaseDate || details.metadata.releaseDate || new Date().toISOString(),
+    summary,
+    content: summary,
+    image_url: details.image_url,
+    metadata: {
+      ...details.metadata,
+      chartTitle: "Mac App Store Search",
+    },
+  };
+}
+
 function parseCodeWeaversChangelog(html: string) {
   const parseChangelogSections = (releaseHtml: string) => {
     const sections = Array.from(releaseHtml.matchAll(/<li>\s*<span[^>]*class=["']subtitle["'][^>]*>([^<]+)<\/span>\s*<ul>([\s\S]*?)<\/ul>\s*<\/li>/gi))
@@ -1030,6 +1058,36 @@ export async function handler(req: Request): Promise<Response> {
       return json({ details });
     } catch (e: any) {
       return err(e.message || "Apple lookup failed", 502);
+    }
+  }
+
+  // ── GET /api/v1/gamedb/appstore/search ───────────────────────────────
+  if (method === "GET" && path === "/api/v1/gamedb/appstore/search") {
+    const q = url.searchParams.get("q") || "";
+    const limit = Math.min(Number(url.searchParams.get("limit")) || 24, 50);
+    if (!q.trim()) return json({ items: [] });
+    try {
+      const apiUrl = new URL("https://itunes.apple.com/search");
+      apiUrl.searchParams.set("term", q);
+      apiUrl.searchParams.set("country", "us");
+      apiUrl.searchParams.set("media", "software");
+      apiUrl.searchParams.set("entity", "macSoftware");
+      apiUrl.searchParams.set("limit", String(limit));
+
+      const res = await fetch(apiUrl.toString(), {
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "MacReady/1.0",
+        },
+      });
+      if (!res.ok) throw new Error(`Apple search returned ${res.status}`);
+      const payload = await res.json();
+      const items = (Array.isArray(payload?.results) ? payload.results : [])
+        .map((app: any, index: number) => parseAppleAppSearchResult(app, index, q))
+        .filter(Boolean);
+      return json({ items });
+    } catch (e: any) {
+      return err(e.message || "Apple search failed", 502);
     }
   }
 

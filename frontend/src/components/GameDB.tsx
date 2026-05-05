@@ -3,7 +3,7 @@ import { ScrollShadow } from "@heroui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Game, MacNewsCategory, MacNewsItem } from "../types/gamedb";
-import { listGames, getDistinctValues, createGame, getMe, getMacNews, getAppStoreDetails, getSteamTrending, searchSteamCatalog, isStaticDataMode, type SteamCatalogItem } from "../api/gamedb";
+import { listGames, getDistinctValues, createGame, getMe, getMacNews, getAppStoreDetails, getSteamTrending, searchSteamCatalog, searchAppStore, isStaticDataMode, type SteamCatalogItem } from "../api/gamedb";
 import { FloatingAgentChat } from "./FloatingAgentChat";
 import { LoadingCards, GameCard, TierBadge } from "./gamedb/GameCards";
 import { GameDetailView } from "./gamedb/GameDetailView";
@@ -1296,6 +1296,13 @@ function AppStoreFeed({
   formatDate: (value?: string) => string;
 }) {
   const [appSearch, setAppSearch] = useState("");
+  const appSearchQuery = appSearch.trim();
+  const { data: searchedApps = [], isFetching: isSearchingApps } = useQuery({
+    queryKey: ["gamedb", "appstore-search", appSearchQuery],
+    queryFn: () => searchAppStore({ q: appSearchQuery }),
+    enabled: appSearchQuery.length > 0,
+    staleTime: 10 * 60_000,
+  });
 
   const getMaker = (article: MacNewsItem) => {
     return typeof article.metadata?.maker === "string" ? article.metadata.maker : "";
@@ -1307,24 +1314,7 @@ function AppStoreFeed({
     return [rank ? `#${rank}` : "", getAppStoreChart(article), date].filter(Boolean).join(" · ");
   };
 
-  const filteredApps = useMemo(() => {
-    const query = appSearch.trim().toLowerCase();
-
-    if (!query) {
-      return articles;
-    }
-
-    return articles.filter((article) => {
-      const haystack = [
-        getAppStoreName(article),
-        getMaker(article),
-        getAppStoreChart(article),
-        article.summary ?? "",
-      ].join(" ").toLowerCase();
-
-      return haystack.includes(query);
-    });
-  }, [appSearch, articles]);
+  const filteredApps = appSearchQuery ? searchedApps : articles;
   const leadApps = filteredApps.slice(0, 6);
   const remainingApps = filteredApps.slice(6, 18);
 
@@ -1366,7 +1356,11 @@ function AppStoreFeed({
           </label>
         </div>
 
-        {filteredApps.length === 0 ? (
+        {appSearchQuery && isSearchingApps ? (
+          <div className="rounded-[18px] bg-white/[0.025] px-5 py-8 text-center ring-1 ring-white/[0.045]">
+            <p className="text-[15px] font-medium text-white/72">Searching Mac App Store</p>
+          </div>
+        ) : filteredApps.length === 0 ? (
           <div className="rounded-[18px] bg-white/[0.025] px-5 py-8 text-center ring-1 ring-white/[0.045]">
             <p className="text-[15px] font-medium text-white/72">No apps found</p>
             <p className="mt-2 text-[13px] text-white/38">Try another app name or developer.</p>
@@ -1408,9 +1402,9 @@ function AppStoreFeed({
         </div>
         )}
 
-        {remainingApps.length > 0 && (
+        {remainingApps.length > 0 && !isSearchingApps && (
           <div className="mt-10">
-            <p className="mb-5 text-[10px] uppercase tracking-[0.24em] text-white/24">More from the charts</p>
+            <p className="mb-5 text-[10px] uppercase tracking-[0.24em] text-white/24">{appSearchQuery ? "More results" : "More from the charts"}</p>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(132px,1fr))] gap-x-4 gap-y-7 xl:grid-cols-6">
               {remainingApps.map((article) => {
                 const maker = getMaker(article);
