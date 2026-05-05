@@ -1169,37 +1169,38 @@ function CrossoverUpdatesFeed({
       <section>
         <p className="mb-4 text-[10px] uppercase tracking-[0.24em] text-white/55">Latest blog posts</p>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {blogPosts.map((article) => (
-            <button
-              key={article.id}
-              type="button"
-              onClick={() => onOpenArticle(article)}
-              className="group grid grid-cols-[120px_minmax(0,1fr)] gap-4 text-left sm:grid-cols-[150px_minmax(0,1fr)] xl:block"
-            >
-              {article.image_url && (
+          {blogPosts.map((article) => {
+            const imageUrl = article.image_url || `${import.meta.env.BASE_URL}imgs/crossover-icon.webp`;
+            return (
+              <button
+                key={article.id}
+                type="button"
+                onClick={() => onOpenArticle(article)}
+                className="group grid grid-cols-[120px_minmax(0,1fr)] gap-4 text-left sm:grid-cols-[150px_minmax(0,1fr)] xl:block"
+              >
                 <img
-                  src={article.image_url}
+                  src={imageUrl}
                   alt=""
                   loading="lazy"
                   decoding="async"
                   className="aspect-[16/10] h-full min-h-[92px] w-full rounded-[12px] object-cover opacity-[0.76] transition-opacity duration-300 group-hover:opacity-100 xl:mb-3 xl:h-auto xl:min-h-0"
                 />
-              )}
-              <span className="min-w-0">
-                <span className="block text-[9px] uppercase tracking-[0.2em] text-white/42">
-                  CodeWeavers {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
-                </span>
-                <span className="mt-1.5 line-clamp-2 block text-[16px] font-medium leading-snug text-white/78 transition-colors group-hover:text-white">
-                  {article.title}
-                </span>
-                {article.summary && (
-                  <span className="mt-2 line-clamp-2 block text-[12px] leading-5 text-white/46">
-                    {article.summary}
+                <span className="min-w-0">
+                  <span className="block text-[9px] uppercase tracking-[0.2em] text-white/42">
+                    CodeWeavers {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
                   </span>
-                )}
-              </span>
-            </button>
-          ))}
+                  <span className="mt-1.5 line-clamp-2 block text-[16px] font-medium leading-snug text-white/78 transition-colors group-hover:text-white">
+                    {article.title}
+                  </span>
+                  {article.summary && (
+                    <span className="mt-2 line-clamp-2 block text-[12px] leading-5 text-white/46">
+                      {article.summary}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
