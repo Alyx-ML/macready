@@ -124,6 +124,40 @@ function isNonGameSteamItem(item: SteamCatalogItem) {
   return NON_GAME_STEAM_NAMES.has(normalizeSteamFilterText(item.name));
 }
 
+function cleanArticleText(value: string) {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&#039;|&apos;/gi, "'")
+    .replace(/&rsquo;|&lsquo;/gi, "'")
+    .replace(/&rdquo;|&ldquo;/gi, "\"")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatCrossoverArticleParagraphs(value: string) {
+  const cleaned = cleanArticleText(value);
+
+  if (!cleaned) {
+    return [];
+  }
+
+  const numberedSections = cleaned.split(/\s+(?=\d+\.\s)/).map((section) => section.trim()).filter(Boolean);
+
+  if (numberedSections.length > 2) {
+    return numberedSections;
+  }
+
+  const sentences = cleaned.match(/[^.!?]+[.!?]+(?:["')\]]+)?|[^.!?]+$/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [cleaned];
+  const paragraphs: string[] = [];
+
+  for (let index = 0; index < sentences.length; index += 3) {
+    paragraphs.push(sentences.slice(index, index + 3).join(" "));
+  }
+
+  return paragraphs;
+}
+
 function hasSteamCover(item: SteamCatalogItem) {
   const value = item.cover_art_url?.trim();
   return Boolean(value && /^https?:\/\//.test(value));
@@ -1376,6 +1410,12 @@ function ArticleReader({
     );
   }
 
+  if (article.category === "CrossOver" && article.source === "CodeWeavers") {
+    return (
+      <CrossoverBlogArticleReader article={article} onBack={onBack} formatDate={formatDate} />
+    );
+  }
+
   return (
     <article className="mx-auto max-w-[1120px] pb-14">
       <button type="button" onClick={onBack} className="mb-6 text-[13px] text-white/44 transition-colors hover:text-white">
@@ -1409,6 +1449,74 @@ function ArticleReader({
             className="mt-8 inline-flex h-8 items-center rounded-full bg-white/[0.055] px-4 text-[13px] font-medium text-white/66 ring-1 ring-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.055)] transition-colors hover:bg-white/[0.09] hover:text-white"
           >
             Read original at {article.source}
+          </a>
+        </div>
+      </section>
+    </article>
+  );
+}
+
+function CrossoverBlogArticleReader({
+  article,
+  onBack,
+  formatDate,
+}: {
+  article: MacNewsItem;
+  onBack: () => void;
+  formatDate: (value?: string) => string;
+}) {
+  const body = article.content || article.summary || "";
+  const paragraphs = formatCrossoverArticleParagraphs(body);
+  const heroImage = article.image_url || `${import.meta.env.BASE_URL}imgs/crossover-icon.webp`;
+
+  return (
+    <article className="mx-auto max-w-[1120px] pb-14">
+      <button type="button" onClick={onBack} className="mb-6 text-[13px] text-white/44 transition-colors hover:text-white">
+        ← Back to CrossOver
+      </button>
+
+      <section className="grid items-start gap-7 md:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)]">
+        <img
+          src={heroImage}
+          alt=""
+          className="aspect-[16/10] w-full rounded-[22px] object-cover opacity-[0.86] md:sticky md:top-16"
+        />
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">
+            CrossOver · CodeWeavers {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
+          </p>
+          <h1 className="mt-4 text-[34px] font-semibold leading-[1.04] tracking-tight text-white md:text-[48px]">
+            {article.title}
+          </h1>
+          {paragraphs.length > 0 && (
+            <div className="relative mt-6">
+              <div
+                className="release-notes-scroll max-h-[min(620px,calc(100vh-180px))] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8"
+                style={{
+                  WebkitOverflowScrolling: "touch",
+                  overscrollBehavior: "contain",
+                  scrollbarGutter: "stable",
+                }}
+              >
+                <div className="space-y-5">
+                  {paragraphs.map((paragraph, index) => (
+                    <p key={`${paragraph.slice(0, 28)}-${index}`} className="text-[16px] leading-8 text-white/62">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              </div>
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-[24px] bg-gradient-to-b from-[#030303] via-[#030303]/70 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[24px] bg-gradient-to-t from-[#030303] via-[#030303]/70 to-transparent" />
+            </div>
+          )}
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-8 inline-flex h-8 items-center rounded-full bg-white/[0.055] px-4 text-[13px] font-medium text-white/66 ring-1 ring-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.055)] transition-colors hover:bg-white/[0.09] hover:text-white"
+          >
+            Read original at CodeWeavers
           </a>
         </div>
       </section>
@@ -1568,7 +1676,7 @@ function CrossoverChangelogPanel({
           </p>
           <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
             <div>
-              <dt className="text-white/34">Product</dt>
+              <dt className="text-white/34">Details</dt>
               <dd className="mt-1 font-medium text-white/78">{product}</dd>
             </div>
             <div>
