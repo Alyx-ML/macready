@@ -39,6 +39,20 @@ function formatLockDate() {
   });
 }
 
+function getSizedImageUrl(url: string, size: number) {
+  if (url.includes("mzstatic.com/image/thumb/")) {
+    return url.replace(/\/\d+x\d+bb\.(png|jpg|jpeg|webp)(\?.*)?$/i, `/${size}x${size}bb.$1$2`);
+  }
+
+  if (url.startsWith("http") && (url.includes("9to5mac.com/") || url.includes("macrumors.com/") || url.includes("appleinsider.com/"))) {
+    const imageUrl = new URL(url);
+    imageUrl.searchParams.set("w", String(size));
+    return imageUrl.toString();
+  }
+
+  return url;
+}
+
 const APPLE_SILICON_CHIPS = [
   "M1", "M1 Pro", "M1 Max", "M1 Ultra",
   "M2", "M2 Pro", "M2 Max", "M2 Ultra",
@@ -995,7 +1009,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
   };
 
   return (
-    <main id="macready-news" className="animate-in pb-16">
+    <main id="macready-news" className="animate-in min-h-[1580px] pb-16">
       <div className="mx-auto max-w-[1420px]">
         <header className="flex justify-center pt-2 pb-7">
           <nav
@@ -1098,7 +1112,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                 >
                   {leadArticle.image_url && (
                     <img
-                      src={leadArticle.image_url}
+                      src={getSizedImageUrl(leadArticle.image_url, 1000)}
                       alt=""
                       loading="eager"
                       decoding="async"
@@ -1137,7 +1151,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                     >
                       {article.image_url && (
                         <img
-                          src={article.image_url}
+                          src={getSizedImageUrl(article.image_url, 240)}
                           alt=""
                           loading="lazy"
                           decoding="async"
@@ -1184,7 +1198,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                         >
                           {article.image_url && (
                             <img
-                              src={article.image_url}
+                              src={getSizedImageUrl(article.image_url, 760)}
                               alt=""
                               loading="lazy"
                               decoding="async"
@@ -1222,7 +1236,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                           >
                             <span className="flex size-[42px] items-center justify-center overflow-hidden rounded-[10px] bg-white/[0.045] text-white/46 ring-1 ring-white/[0.055]">
                               {article.image_url ? (
-                                <img src={article.image_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" />
+                                <img src={getSizedImageUrl(article.image_url, 96)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" />
                               ) : Icon ? (
                                 <Icon className="size-4" strokeWidth={1.75} />
                               ) : null}
@@ -1314,7 +1328,7 @@ function MacOSUpdatesFeed({
             >
               {article.image_url && (
                 <img
-                  src={article.image_url}
+                  src={getSizedImageUrl(article.image_url, 640)}
                   alt=""
                   loading="lazy"
                   decoding="async"
@@ -1514,12 +1528,12 @@ function AppStoreFeed({
             >
               {article.image_url && (
                 <img
-                  src={article.image_url}
+                  src={getSizedImageUrl(article.image_url, 128)}
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  width={460}
-                  height={215}
+                  width={128}
+                  height={128}
                   className="size-[58px] rounded-[14px] object-cover shadow-[0_10px_26px_rgba(0,0,0,0.34)]"
                 />
               )}
@@ -1557,7 +1571,7 @@ function AppStoreFeed({
                     <span className="flex min-w-0 items-center gap-3">
                       {article.image_url && (
                         <img
-                          src={article.image_url}
+                          src={getSizedImageUrl(article.image_url, 96)}
                           alt=""
                           loading="lazy"
                           decoding="async"
