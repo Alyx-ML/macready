@@ -1,13 +1,15 @@
-import winkNLP from 'wink-nlp';
-import model from 'wink-eng-lite-web-model';
+type WinkFactory = typeof import("wink-nlp").default;
+type WinkInstance = ReturnType<WinkFactory>;
 
-// Lazy-initialized so a load failure doesn't crash the app at import time
-let _nlp: ReturnType<typeof winkNLP> | null = null;
-function getNLP() {
-  if (!_nlp) {
-    try { _nlp = winkNLP(model); } catch { /* wink unavailable */ }
+let _nlpPromise: Promise<WinkInstance> | null = null;
+function getNLP(): Promise<WinkInstance> {
+  if (!_nlpPromise) {
+    _nlpPromise = Promise.all([
+      import("wink-nlp"),
+      import("wink-eng-lite-web-model"),
+    ]).then(([winkModule, modelModule]) => winkModule.default(modelModule.default));
   }
-  return _nlp;
+  return _nlpPromise;
 }
 
 export type Intent =
@@ -208,7 +210,7 @@ function extractGameName(raw: string): string {
 }
 
 // ── Entity Extraction ───────────────────────────────────────────────
-function extractEntities(raw: string): Entity[] {
+async function extractEntities(raw: string): Promise<Entity[]> {
   const entities: Entity[] = [];
   const text = normalize(raw);
 
@@ -314,25 +316,20 @@ function extractEntities(raw: string): Entity[] {
     }
   }
 
-  // Prose entities using wink-nlp (lazy, isolated so failure can't crash the app)
-  try {
-    const nlp = getNLP();
-    if (nlp) {
-      const doc = nlp.readDoc(raw);
-      // @ts-ignore - wink-nlp its.pos is valid at runtime
-      const tokens = doc.tokens().out(nlp.its.pos) as string[];
-      const words = doc.tokens().out() as string[];
-      const nounPhrases: string[] = [];
-      for (let i = 0; i < tokens.length; i++) {
-        if (tokens[i] === 'PROPN' || tokens[i] === 'NOUN') {
-          nounPhrases.push(words[i]);
-        }
-      }
-      if (nounPhrases.length > 0 && extractGameName(raw) === "") {
-        entities.push({ type: "game_name", value: nounPhrases.join(" ") });
-      }
+  const nlp = await getNLP();
+  const doc = nlp.readDoc(raw);
+  // @ts-ignore - wink-nlp its.pos is valid at runtime
+  const tokens = doc.tokens().out(nlp.its.pos) as string[];
+  const words = doc.tokens().out() as string[];
+  const nounPhrases: string[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i] === 'PROPN' || tokens[i] === 'NOUN') {
+      nounPhrases.push(words[i]);
     }
-  } catch { /* wink extraction failed, skip */ }
+  }
+  if (nounPhrases.length > 0 && extractGameName(raw) === "") {
+    entities.push({ type: "game_name", value: nounPhrases.join(" ") });
+  }
 
   return deduplicate(entities);
 }
@@ -347,10 +344,10 @@ function deduplicate(entities: Entity[]): Entity[] {
   });
 }
 
-export function parseCommand(raw: string): ParsedCommand {
+export async function parseCommand(raw: string): Promise<ParsedCommand> {
   const intent = findIntent(raw);
   const gameName = extractGameName(raw);
-  const entities = extractEntities(raw);
+  const entities = await extractEntities(raw);
 
   return { intent, gameName, entities, raw };
 }

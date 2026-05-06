@@ -84,11 +84,6 @@ body {
   padding-bottom: var(--safe-bottom);
 }
 
-.content-auto {
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 720px;
-}
-
 /* Skeleton loading */
 @keyframes shimmer {
   0% { background-position: -200% 0; }

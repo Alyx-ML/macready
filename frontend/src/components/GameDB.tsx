@@ -1,5 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { ScrollShadow } from "@heroui/react";
+import { useState, useCallback, useMemo, useRef, useEffect, type HTMLAttributes } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Game, MacNewsCategory, MacNewsItem } from "../types/gamedb";
@@ -15,6 +14,14 @@ import { getTierConfig, NEW_TIERS } from "./gamedb/tierConfig";
 import { Apple, ChevronLeft, ChevronRight, Gamepad2, ListOrdered, ScrollText, ShoppingBag, Star, type LucideIcon } from "lucide-react";
 
 type MainView = "home" | "compatibility";
+
+type ScrollShadowProps = HTMLAttributes<HTMLDivElement> & {
+  hideScrollBar?: boolean;
+};
+
+function ScrollShadow({ hideScrollBar: _hideScrollBar, className = "", ...props }: ScrollShadowProps) {
+  return <div className={className} {...props} />;
+}
 
 function formatLockTime() {
   return new Date().toLocaleTimeString("en-GB", {
@@ -2871,7 +2878,7 @@ function FlickeringFooter() {
   ];
 
   return (
-    <footer id="footer" className="safe-inline safe-bottom-pad content-auto relative z-10 w-full bg-black">
+    <footer id="footer" className="safe-inline safe-bottom-pad relative z-10 w-full bg-black">
       <div className="mx-auto flex max-w-[1600px] flex-col p-10 md:flex-row md:items-center md:justify-between">
         <div className="mx-0 flex max-w-xs flex-col items-start justify-start gap-y-5">
           <a href="#" className="flex items-center gap-2">

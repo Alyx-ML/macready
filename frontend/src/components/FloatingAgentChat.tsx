@@ -217,8 +217,7 @@ export function FloatingAgentChat({ mode = "dashboard", dashboardName = "__creat
 
     try {
       if (mode === "gamedb") {
-        // Use Compromise NLP parser directly in browser.
-        const parsed = parseCommand(text);
+        const parsed = await parseCommand(text);
         const result = await sendAgentCommand({
           intent: parsed.intent,
           game_name: parsed.gameName,
