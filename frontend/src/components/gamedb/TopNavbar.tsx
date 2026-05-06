@@ -268,7 +268,7 @@ function AppleCalendarPopover({ isOpen }: { isOpen: boolean }) {
             <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">Apple Calendar</p>
             <h2 className="mt-1 text-[17px] font-semibold tracking-tight">Upcoming</h2>
           </div>
-          <span className="rounded-full bg-white/[0.07] px-2.5 py-1 text-[11px] text-white/60">2026</span>
+          <span className="text-[11px] text-white/48">2026</span>
         </div>
         <div className="mt-2 space-y-1">
           {APPLE_CALENDAR_ITEMS.map((item) => (
