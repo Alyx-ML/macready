@@ -90,8 +90,6 @@ const MENUS: MenuConfig[] = [
   {
     label: "Support",
     items: [
-      { label: "Search MacReady", action: "compatibility", shortcut: "⌘F" },
-      { type: "separator" },
       { label: "Keyboard Shortcuts", action: "shortcuts" },
       { label: "Contact Support", action: "support" },
     ],
