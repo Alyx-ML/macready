@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect, type HTMLAttributes } from "react";
+import { forwardRef, useState, useCallback, useMemo, useRef, useEffect, type Dispatch, type HTMLAttributes, type SetStateAction } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Game, MacNewsCategory, MacNewsItem } from "../types/gamedb";
@@ -15,13 +15,51 @@ import { Apple, ChevronLeft, ChevronRight, Gamepad2, ListOrdered, ScrollText, Sh
 
 type MainView = "home" | "compatibility";
 
+const COMPATIBILITY_VISIBLE_COUNT_KEY = "macready:compatibility:visible-count";
+const COMPATIBILITY_SCROLL_TOP_KEY = "macready:compatibility:scroll-top";
+
+function readSessionNumber(key: string, defaultValue: number) {
+  if (typeof window === "undefined") return defaultValue;
+  const value = Number(window.sessionStorage.getItem(key));
+  return Number.isFinite(value) && value >= 0 ? value : defaultValue;
+}
+
+function writeSessionNumber(key: string, value: number) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(key, String(Math.max(0, Math.round(value))));
+}
+
+type SessionJSONValue<T> = {
+  savedAt: number;
+  value: T;
+};
+
+function readSessionJSON<T>(key: string, maxAgeMs: number): T | undefined {
+  if (typeof window === "undefined") return undefined;
+  const raw = window.sessionStorage.getItem(key);
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as SessionJSONValue<T>;
+    if (!parsed || Date.now() - parsed.savedAt > maxAgeMs) return undefined;
+    return parsed.value;
+  } catch {
+    window.sessionStorage.removeItem(key);
+    return undefined;
+  }
+}
+
+function writeSessionJSON<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), value }));
+}
+
 type ScrollShadowProps = HTMLAttributes<HTMLDivElement> & {
   hideScrollBar?: boolean;
 };
 
-function ScrollShadow({ hideScrollBar: _hideScrollBar, className = "", ...props }: ScrollShadowProps) {
-  return <div className={className} {...props} />;
-}
+const ScrollShadow = forwardRef<HTMLDivElement, ScrollShadowProps>(function ScrollShadow({ hideScrollBar: _hideScrollBar, className = "", ...props }, ref) {
+  return <div ref={ref} className={className} {...props} />;
+});
 
 function formatLockTime() {
   return new Date().toLocaleTimeString("en-GB", {
@@ -317,9 +355,38 @@ export function GameDB() {
   const [steamResults, setSteamResults] = useState<SteamCatalogItem[]>([]);
   const [steamLoading, setSteamLoading] = useState(false);
   const [addingSteamId, setAddingSteamId] = useState<string | null>(null);
+  const [compatibilityVisibleSteamCount, setCompatibilityVisibleSteamCount] = useState(() => readSessionNumber(COMPATIBILITY_VISIBLE_COUNT_KEY, 16));
+  const compatibilityScrollTopRef = useRef(readSessionNumber(COMPATIBILITY_SCROLL_TOP_KEY, 0));
+  const compatibilityScrollSaveTimer = useRef<number | null>(null);
   const compatibilityImagePreloadCache = useRef<Set<string>>(new Set());
 
+  const rememberCompatibilityScrollTop = useCallback((scrollTop: number) => {
+    compatibilityScrollTopRef.current = scrollTop;
+    if (typeof window === "undefined") return;
+    if (compatibilityScrollSaveTimer.current !== null) {
+      window.clearTimeout(compatibilityScrollSaveTimer.current);
+    }
+    compatibilityScrollSaveTimer.current = window.setTimeout(() => {
+      writeSessionNumber(COMPATIBILITY_SCROLL_TOP_KEY, compatibilityScrollTopRef.current);
+      compatibilityScrollSaveTimer.current = null;
+    }, 180);
+  }, []);
+
+  useEffect(() => {
+    writeSessionNumber(COMPATIBILITY_VISIBLE_COUNT_KEY, compatibilityVisibleSteamCount);
+  }, [compatibilityVisibleSteamCount]);
+
+  useEffect(() => {
+    return () => {
+      if (compatibilityScrollSaveTimer.current !== null) {
+        window.clearTimeout(compatibilityScrollSaveTimer.current);
+      }
+      writeSessionNumber(COMPATIBILITY_SCROLL_TOP_KEY, compatibilityScrollTopRef.current);
+    };
+  }, []);
+
   const filterKey = [statusFilter, wineFilter, macosFilter, hwFilter];
+  const gamesSessionKey = `macready:compatibility:games:${filterKey.join("|")}`;
   const { data: games, isLoading } = useQuery({
     queryKey: ["gamedb", "games", ...filterKey],
     queryFn: () =>
@@ -333,8 +400,15 @@ export function GameDB() {
     staleTime: 10 * 60_000,
     gcTime: 60 * 60_000,
     refetchOnWindowFocus: false,
+    initialData: () => readSessionJSON<Game[]>(gamesSessionKey, 60 * 60_000),
+    initialDataUpdatedAt: 0,
     placeholderData: (previousData) => previousData,
   });
+
+  useEffect(() => {
+    if (!games || isStaticDataMode) return;
+    writeSessionJSON(gamesSessionKey, games);
+  }, [games, gamesSessionKey]);
   const { data: macNews, isLoading: isMacNewsLoading } = useQuery({
     queryKey: ["gamedb", "mac-news", "structured-release-notes"],
     queryFn: getMacNews,
@@ -358,8 +432,15 @@ export function GameDB() {
     staleTime: 30 * 60_000,
     gcTime: 2 * 60 * 60_000,
     refetchOnWindowFocus: false,
+    initialData: () => readSessionJSON<SteamCatalogItem[]>("macready:compatibility:steam-trending", 2 * 60 * 60_000),
+    initialDataUpdatedAt: 0,
     placeholderData: (previousData) => previousData,
   });
+
+  useEffect(() => {
+    if (trendingSteam.length === 0 || isStaticDataMode) return;
+    writeSessionJSON("macready:compatibility:steam-trending", trendingSteam);
+  }, [trendingSteam]);
 
   useEffect(() => {
     if (mainView !== "compatibility" || trendingSteam.length === 0) return;
@@ -511,6 +592,10 @@ export function GameDB() {
                 onAddSteamGame={handleAddSteamGame}
                 trendingSteam={trendingSteam}
                 isTrendingSteamLoading={isTrendingSteamLoading}
+                visibleSteamCount={compatibilityVisibleSteamCount}
+                setVisibleSteamCount={setCompatibilityVisibleSteamCount}
+                initialSteamScrollTop={compatibilityScrollTopRef.current}
+                onSteamScrollTopChange={rememberCompatibilityScrollTop}
               />
             )}
       </div>
@@ -601,7 +686,8 @@ function GameListView({
   games, isLoading, search, setSearch, statusFilter, setStatusFilter,
   distinctWine,
   wineFilter, setWineFilter, macosFilter, setMacosFilter, hwFilter, setHwFilter,
-  onOpenDetail, steamResults, steamLoading, addingSteamId, onAddSteamGame, trendingSteam, isTrendingSteamLoading
+  onOpenDetail, steamResults, steamLoading, addingSteamId, onAddSteamGame, trendingSteam, isTrendingSteamLoading,
+  visibleSteamCount, setVisibleSteamCount, initialSteamScrollTop, onSteamScrollTopChange
 }: {
   games: Game[]; isLoading: boolean; search: string; setSearch: (s: string) => void;
   statusFilter: string; setStatusFilter: (s: string) => void;
@@ -613,12 +699,17 @@ function GameListView({
   steamResults: any[]; steamLoading: boolean; addingSteamId: string | null; onAddSteamGame: (item: any) => void;
   trendingSteam: any[];
   isTrendingSteamLoading: boolean;
+  visibleSteamCount: number;
+  setVisibleSteamCount: Dispatch<SetStateAction<number>>;
+  initialSteamScrollTop: number;
+  onSteamScrollTopChange: (scrollTop: number) => void;
 }) {
   const [hoveredFilter, setHoveredFilter] = useState<string | null>(null);
   const [openFilterMenu, setOpenFilterMenu] = useState<string | null>(null);
-  const [visibleSteamCount, setVisibleSteamCount] = useState(8);
   const searchRef = useRef<HTMLInputElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const steamScrollerRef = useRef<HTMLDivElement>(null);
+  const restoredSteamScrollRef = useRef(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -666,9 +757,19 @@ function GameListView({
       icon: <svg viewBox="0 0 24 24" fill="none" className="filter-minimal-icon" aria-hidden="true"><rect x="6.7" y="6.7" width="10.6" height="10.6" rx="2"/><rect x="10" y="10" width="4" height="4" rx="0.7"/><path d="M9 4v2M12 4v2M15 4v2M9 18v2M12 18v2M15 18v2M4 9h2M4 12h2M4 15h2M18 9h2M18 12h2M18 15h2"/></svg> },
   ];
 
+  const localGameIndexes = useMemo(() => {
+    const bySteamId = new Map<string, Game>();
+    const byName = new Map<string, Game>();
+    for (const game of games) {
+      if (game.steam_app_id) bySteamId.set(game.steam_app_id, game);
+      byName.set(game.name.toLowerCase(), game);
+    }
+    return { bySteamId, byName };
+  }, [games]);
+
   const steamGamesWithLocalData = useMemo(() => {
     return trendingSteam.map(steamGame => {
-      const localGame = games.find(g => g.steam_app_id === steamGame.steam_app_id || g.name.toLowerCase() === steamGame.name.toLowerCase());
+      const localGame = localGameIndexes.bySteamId.get(steamGame.steam_app_id) || localGameIndexes.byName.get(steamGame.name.toLowerCase());
       if (localGame) {
         return {
           ...steamGame,
@@ -680,7 +781,7 @@ function GameListView({
       }
       return { ...steamGame, isLocal: false };
     });
-  }, [trendingSteam, games]);
+  }, [trendingSteam, localGameIndexes]);
 
   const carouselGames = useMemo(() => {
     const picked = new Map<string, SteamCatalogItem>();
@@ -709,9 +810,28 @@ function GameListView({
     );
   }, [steamGamesWithLocalData]);
 
+  const compatibilityCriteriaKey = [search, statusFilter, wineFilter, macosFilter, hwFilter].join("\u0001");
+  const previousCompatibilityCriteriaKey = useRef(compatibilityCriteriaKey);
+
   useEffect(() => {
-    setVisibleSteamCount(8);
-  }, [trendingSteam.length, search, statusFilter, wineFilter, macosFilter, hwFilter]);
+    if (previousCompatibilityCriteriaKey.current === compatibilityCriteriaKey) return;
+    previousCompatibilityCriteriaKey.current = compatibilityCriteriaKey;
+    setVisibleSteamCount(16);
+    onSteamScrollTopChange(0);
+    if (steamScrollerRef.current) {
+      steamScrollerRef.current.scrollTop = 0;
+    }
+  }, [compatibilityCriteriaKey, onSteamScrollTopChange, setVisibleSteamCount]);
+
+  useEffect(() => {
+    if (restoredSteamScrollRef.current || search !== "" || hasActiveFilters) return;
+    const node = steamScrollerRef.current;
+    if (!node || initialSteamScrollTop <= 0) return;
+    restoredSteamScrollRef.current = true;
+    requestAnimationFrame(() => {
+      node.scrollTop = initialSteamScrollTop;
+    });
+  }, [hasActiveFilters, initialSteamScrollTop, search]);
 
   useEffect(() => {
     if (search !== "" || hasActiveFilters) return;
@@ -856,12 +976,14 @@ function GameListView({
           <CardSilkField id="game-cards" className="left-1/2 w-screen -translate-x-1/2 rounded-none border-x-0 border-y-0 px-4 py-10 sm:px-6">
             <div className="relative z-10 mx-auto max-w-[1600px]">
               <ScrollShadow
+                ref={steamScrollerRef}
                 hideScrollBar
                 className="relative max-h-[min(620px,calc(100vh-220px))] overflow-y-auto pr-1"
                 onScroll={(event) => {
                   const node = event.currentTarget;
+                  onSteamScrollTopChange(node.scrollTop);
                   if (node.scrollTop + node.clientHeight >= node.scrollHeight - 420) {
-                    setVisibleSteamCount((count) => Math.min(count + 8, exploreGames.length));
+                    setVisibleSteamCount((count) => Math.min(count + 12, exploreGames.length));
                   }
                 }}
               >

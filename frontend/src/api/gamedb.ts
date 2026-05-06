@@ -5,6 +5,26 @@ const STATIC_DATA_BASE = `${import.meta.env.BASE_URL}data`;
 const USE_STATIC_DATA = import.meta.env.VITE_GITHUB_PAGES_DATA === "true";
 export const isStaticDataMode = USE_STATIC_DATA;
 const staticJSONCache = new Map<string, Promise<unknown>>();
+const SESSION_JSON_PREFIX = "macready:api:";
+
+function readSessionData<T>(key: string, maxAgeMs: number): T | undefined {
+  if (typeof window === "undefined") return undefined;
+  const raw = window.sessionStorage.getItem(`${SESSION_JSON_PREFIX}${key}`);
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as { savedAt: number; value: T };
+    if (!parsed || Date.now() - parsed.savedAt > maxAgeMs) return undefined;
+    return parsed.value;
+  } catch {
+    window.sessionStorage.removeItem(`${SESSION_JSON_PREFIX}${key}`);
+    return undefined;
+  }
+}
+
+function writeSessionData<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(`${SESSION_JSON_PREFIX}${key}`, JSON.stringify({ savedAt: Date.now(), value }));
+}
 
 export type SteamCatalogItem = {
   name: string;
@@ -290,7 +310,11 @@ export async function searchSteamCatalog(params: { q: string; status?: string })
   }
   const sp = new URLSearchParams({ q: params.q });
   if (params.status) sp.set("status", params.status);
+  const cacheKey = `steam-search:${sp.toString()}`;
+  const cached = readSessionData<SteamCatalogItem[]>(cacheKey, 30 * 60_000);
+  if (cached) return cached;
   const data = await fetchJSON<{ items: SteamCatalogItem[] }>(`${BASE}/steam/search?${sp.toString()}`);
+  writeSessionData(cacheKey, data.items);
   return data.items;
 }
 

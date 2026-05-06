@@ -3,6 +3,7 @@ import { getDB } from "./db.ts";
 import { handleAgentCommand } from "./agent.ts";
 import { join } from "path";
 import { statSync, watch } from "fs";
+import { createHash } from "crypto";
 
 const PROJECT_DIR = process.argv[2] || process.cwd();
 const BASE_PORT = parseInt(process.env.PORT || "8421");
@@ -12,14 +13,43 @@ const db = getDB(PROJECT_DIR);
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, If-None-Match, If-Modified-Since",
 };
+
+const apiMemoryCache = new Map<string, { expiresAt: number; value: unknown }>();
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json", ...CORS },
   });
+
+async function cacheValue<T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> {
+  const cached = apiMemoryCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value as T;
+  }
+  const value = await load();
+  apiMemoryCache.set(key, { expiresAt: Date.now() + ttlMs, value });
+  return value;
+}
+
+function jsonWithCache(req: Request, data: unknown, maxAgeSeconds = 300) {
+  const body = JSON.stringify(data);
+  const etag = `"${createHash("sha1").update(body).digest("base64url")}"`;
+  const lastModified = new Date().toUTCString();
+  const headers = {
+    "Content-Type": "application/json",
+    "Cache-Control": `public, max-age=${maxAgeSeconds}, stale-while-revalidate=${maxAgeSeconds}`,
+    "ETag": etag,
+    "Last-Modified": lastModified,
+    ...CORS,
+  };
+  if (req.headers.get("if-none-match") === etag) {
+    return new Response(null, { status: 304, headers });
+  }
+  return new Response(body, { status: 200, headers });
+}
 
 const err = (msg: string, status = 400) => json({ success: false, message: msg }, status);
 
@@ -631,93 +661,97 @@ const CROSSOVER_PLAYABLE_STEAM_IDS = new Set([
 
 async function getSteamMetadata(steamAppId: string | null): Promise<any | null> {
   if (!steamAppId) return null;
-  const res = await fetch(`https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(steamAppId)}&l=english&cc=US`);
-  if (!res.ok) return null;
-  const payload = await res.json() as any;
-  const entry = payload?.[steamAppId];
-  if (!entry?.success || !entry.data) return null;
-  const data = entry.data;
-  const macNative = Boolean(data.platforms?.mac);
-  const crossoverPlayable = CROSSOVER_PLAYABLE_STEAM_IDS.has(steamAppId);
-  const compatibilityTier = macNative ? "native_arm" : crossoverPlayable ? "playable" : "unsupported";
-  const compatibilityReasons = [
-    macNative ? "Native Mac version listed on Steam" : null,
-    crossoverPlayable ? "Known CrossOver playable title" : null,
-  ].filter(Boolean);
+  return cacheValue(`steam:metadata:${steamAppId}`, 6 * 60 * 60_000, async () => {
+    const res = await fetch(`https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(steamAppId)}&l=english&cc=US`);
+    if (!res.ok) return null;
+    const payload = await res.json() as any;
+    const entry = payload?.[steamAppId];
+    if (!entry?.success || !entry.data) return null;
+    const data = entry.data;
+    const macNative = Boolean(data.platforms?.mac);
+    const crossoverPlayable = CROSSOVER_PLAYABLE_STEAM_IDS.has(steamAppId);
+    const compatibilityTier = macNative ? "native_arm" : crossoverPlayable ? "playable" : "unsupported";
+    const compatibilityReasons = [
+      macNative ? "Native Mac version listed on Steam" : null,
+      crossoverPlayable ? "Known CrossOver playable title" : null,
+    ].filter(Boolean);
 
-  return {
-    steam_app_id: steamAppId,
-    description: data.short_description || "",
-    detailed_description: data.detailed_description || "",
-    genres: (data.genres || []).map((g: any) => g.description).filter(Boolean),
-    categories: (data.categories || []).map((c: any) => c.description).filter(Boolean),
-    developers: data.developers || [],
-    publishers: data.publishers || [],
-    release_date: data.release_date?.date || "",
-    website: data.website || "",
-    is_free: Boolean(data.is_free),
-    price_overview: data.price_overview ? {
-      currency: data.price_overview.currency || "",
-      initial: data.price_overview.initial || 0,
-      final: data.price_overview.final || 0,
-      discount_percent: data.price_overview.discount_percent || 0,
-      initial_formatted: data.price_overview.initial_formatted || "",
-      final_formatted: data.price_overview.final_formatted || "",
-    } : null,
-    store_url: `https://store.steampowered.com/app/${steamAppId}`,
-    header_image: data.header_image || getSteamCoverUrl(steamAppId),
-    capsule_image: data.capsule_image || data.header_image || getSteamCoverUrl(steamAppId),
-    background: data.background_raw || data.background || "",
-    movies: [
-      ...(data.movies || []).map((movie: any) => ({
-      id: movie.id,
-      name: movie.name,
-      thumbnail: movie.thumbnail || "",
-      webm: movie.webm?.max || movie.webm?.["480"] || "",
-      mp4: movie.mp4?.max || movie.mp4?.["480"] || "",
-      })),
-      ...extractSteamDescriptionVideos(data.detailed_description),
-    ].filter((movie: any, index: number, all: any[]) => (movie.mp4 || movie.webm) && all.findIndex((item) => item.mp4 === movie.mp4 && item.webm === movie.webm) === index),
-    screenshots: (data.screenshots || []).map((shot: any) => ({
-      id: shot.id,
-      thumbnail: shot.path_thumbnail || "",
-      full: shot.path_full || "",
-    })).filter((shot: any) => shot.full),
-    requirements: {
-      pc: {
-        minimum: stripSteamHtml(data.pc_requirements?.minimum),
-        recommended: stripSteamHtml(data.pc_requirements?.recommended),
+    return {
+      steam_app_id: steamAppId,
+      description: data.short_description || "",
+      detailed_description: data.detailed_description || "",
+      genres: (data.genres || []).map((g: any) => g.description).filter(Boolean),
+      categories: (data.categories || []).map((c: any) => c.description).filter(Boolean),
+      developers: data.developers || [],
+      publishers: data.publishers || [],
+      release_date: data.release_date?.date || "",
+      website: data.website || "",
+      is_free: Boolean(data.is_free),
+      price_overview: data.price_overview ? {
+        currency: data.price_overview.currency || "",
+        initial: data.price_overview.initial || 0,
+        final: data.price_overview.final || 0,
+        discount_percent: data.price_overview.discount_percent || 0,
+        initial_formatted: data.price_overview.initial_formatted || "",
+        final_formatted: data.price_overview.final_formatted || "",
+      } : null,
+      store_url: `https://store.steampowered.com/app/${steamAppId}`,
+      header_image: data.header_image || getSteamCoverUrl(steamAppId),
+      capsule_image: data.capsule_image || data.header_image || getSteamCoverUrl(steamAppId),
+      background: data.background_raw || data.background || "",
+      movies: [
+        ...(data.movies || []).map((movie: any) => ({
+        id: movie.id,
+        name: movie.name,
+        thumbnail: movie.thumbnail || "",
+        webm: movie.webm?.max || movie.webm?.["480"] || "",
+        mp4: movie.mp4?.max || movie.mp4?.["480"] || "",
+        })),
+        ...extractSteamDescriptionVideos(data.detailed_description),
+      ].filter((movie: any, index: number, all: any[]) => (movie.mp4 || movie.webm) && all.findIndex((item) => item.mp4 === movie.mp4 && item.webm === movie.webm) === index),
+      screenshots: (data.screenshots || []).map((shot: any) => ({
+        id: shot.id,
+        thumbnail: shot.path_thumbnail || "",
+        full: shot.path_full || "",
+      })).filter((shot: any) => shot.full),
+      requirements: {
+        pc: {
+          minimum: stripSteamHtml(data.pc_requirements?.minimum),
+          recommended: stripSteamHtml(data.pc_requirements?.recommended),
+        },
+        mac: {
+          minimum: stripSteamHtml(data.mac_requirements?.minimum),
+          recommended: stripSteamHtml(data.mac_requirements?.recommended),
+        },
       },
-      mac: {
-        minimum: stripSteamHtml(data.mac_requirements?.minimum),
-        recommended: stripSteamHtml(data.mac_requirements?.recommended),
-      },
-    },
-    platforms: data.platforms || {},
-    mac_native: macNative,
-    crossover_playable: crossoverPlayable,
-    compatibility_tier: compatibilityTier,
-    compatibility_label: macNative || crossoverPlayable ? "Playable" : "Unrated",
-    compatibility_reasons: compatibilityReasons,
-  };
+      platforms: data.platforms || {},
+      mac_native: macNative,
+      crossover_playable: crossoverPlayable,
+      compatibility_tier: compatibilityTier,
+      compatibility_label: macNative || crossoverPlayable ? "Playable" : "Unrated",
+      compatibility_reasons: compatibilityReasons,
+    };
+  });
 }
 
 async function getSteamReviewSummary(steamAppId: string | null): Promise<any | null> {
   if (!steamAppId) return null;
-  const res = await fetch(`https://store.steampowered.com/appreviews/${encodeURIComponent(steamAppId)}?json=1&language=all&purchase_type=all&filter=summary`);
-  if (!res.ok) return null;
-  const payload = await res.json() as any;
-  const summary = payload?.query_summary;
-  if (!summary) return null;
-  const score = Number(summary.review_score) || 0;
-  return {
-    steam_app_id: steamAppId,
-    review_score: score,
-    review_score_desc: summary.review_score_desc || REVIEW_LABELS[score] || "No user reviews",
-    total_positive: Number(summary.total_positive) || 0,
-    total_negative: Number(summary.total_negative) || 0,
-    total_reviews: Number(summary.total_reviews) || 0,
-  };
+  return cacheValue(`steam:reviews:${steamAppId}`, 6 * 60 * 60_000, async () => {
+    const res = await fetch(`https://store.steampowered.com/appreviews/${encodeURIComponent(steamAppId)}?json=1&language=all&purchase_type=all&filter=summary`);
+    if (!res.ok) return null;
+    const payload = await res.json() as any;
+    const summary = payload?.query_summary;
+    if (!summary) return null;
+    const score = Number(summary.review_score) || 0;
+    return {
+      steam_app_id: steamAppId,
+      review_score: score,
+      review_score_desc: summary.review_score_desc || REVIEW_LABELS[score] || "No user reviews",
+      total_positive: Number(summary.total_positive) || 0,
+      total_negative: Number(summary.total_negative) || 0,
+      total_reviews: Number(summary.total_reviews) || 0,
+    };
+  });
 }
 
 function statusMatches(requested: string, tier: string) {
@@ -843,6 +877,9 @@ export async function handler(req: Request): Promise<Response> {
     const wine   = url.searchParams.get("wine_version") || "";
     const macos  = url.searchParams.get("macos_version") || "";
     const hw     = url.searchParams.get("hardware") || "";
+    const cursor = Math.max(0, Number(url.searchParams.get("cursor")) || 0);
+    const requestedLimit = Number(url.searchParams.get("limit")) || 0;
+    const limit = requestedLimit > 0 ? Math.min(requestedLimit, 100) : 0;
 
     let sql = `SELECT DISTINCT g.* FROM games g
                LEFT JOIN tests t ON t.game_id = g.id
@@ -864,9 +901,15 @@ export async function handler(req: Request): Promise<Response> {
     if (macos)  { sql += ` AND t.macos_version = ?`; args.push(macos); }
     if (hw)     { sql += ` AND t.hardware LIKE ?`; args.push(`${hw}%`); }
     sql += ` ORDER BY g.name COLLATE NOCASE`;
+    if (limit > 0) {
+      sql += ` LIMIT ? OFFSET ?`;
+      args.push(limit + 1, cursor);
+    }
 
     try {
-      const games = db.query(sql).all(...args) as any[];
+      const rows = db.query(sql).all(...args) as any[];
+      const hasMore = limit > 0 && rows.length > limit;
+      const games = hasMore ? rows.slice(0, limit) : rows;
       for (const g of games) {
         // Latest test
         const lt = db.query(`SELECT * FROM tests WHERE game_id = ? ORDER BY tested_at DESC LIMIT 1`).get(g.id) as any;
@@ -887,7 +930,7 @@ export async function handler(req: Request): Promise<Response> {
           g.cover_art_url = getSteamCoverUrl(g.steam_app_id);
         }
       }
-      return json({ games });
+      return jsonWithCache(req, { games, nextCursor: hasMore ? cursor + limit : null }, 300);
     } catch (e: any) { return err(e.message, 500); }
   }
 
@@ -1025,7 +1068,7 @@ export async function handler(req: Request): Promise<Response> {
     if (!["wine_version", "macos_version", "hardware", "status", "platform", "genre"].includes(col)) return err("Invalid column", 400);
     try {
       const rows = db.query(`SELECT DISTINCT ${col} FROM tests WHERE ${col} IS NOT NULL AND ${col} != '' ORDER BY ${col}`).all() as any[];
-      return json({ values: rows.map((r) => r[col]) });
+      return jsonWithCache(req, { values: rows.map((r) => r[col]) }, 1800);
     } catch (e: any) { return err(e.message, 500); }
   }
 
@@ -1194,27 +1237,30 @@ export async function handler(req: Request): Promise<Response> {
     const status = url.searchParams.get("status") || "";
     if (!q) return err("Query required", 400);
     try {
-      const res = await fetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=english&cc=US`);
-      if (!res.ok) throw new Error("Steam API failed");
-      const data = await res.json() as any;
-      const items = await Promise.all((data.items || []).slice(0, 8).map(async (item: any) => {
-        const appId = item.id.toString();
-        const metadata = await getSteamMetadata(appId);
-        const tier = metadata?.compatibility_tier || "unsupported";
-        return {
-          name: item.name,
-          steam_app_id: appId,
-          cover_art_url: metadata?.header_image || `https://cdn.cloudflare.steamstatic.com/steam/apps/${item.id}/header.jpg`,
-          description: metadata?.description || "",
-          genres: metadata?.genres || [],
-          mac_native: Boolean(metadata?.mac_native),
-          crossover_playable: Boolean(metadata?.crossover_playable),
-          compatibility_tier: tier,
-          compatibility_label: metadata?.compatibility_label || "Unrated",
-          compatibility_reasons: metadata?.compatibility_reasons || [],
-        };
-      }));
-      return json({ items: items.filter((item: any) => statusMatches(status, item.compatibility_tier)) });
+      const items = await cacheValue(`steam:search:${q}:${status}`, 10 * 60_000, async () => {
+        const res = await fetch(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&l=english&cc=US`);
+        if (!res.ok) throw new Error("Steam API failed");
+        const data = await res.json() as any;
+        const enrichedItems = await Promise.all((data.items || []).slice(0, 8).map(async (item: any) => {
+          const appId = item.id.toString();
+          const metadata = await getSteamMetadata(appId);
+          const tier = metadata?.compatibility_tier || "unsupported";
+          return {
+            name: item.name,
+            steam_app_id: appId,
+            cover_art_url: metadata?.header_image || `https://cdn.cloudflare.steamstatic.com/steam/apps/${item.id}/header.jpg`,
+            description: metadata?.description || "",
+            genres: metadata?.genres || [],
+            mac_native: Boolean(metadata?.mac_native),
+            crossover_playable: Boolean(metadata?.crossover_playable),
+            compatibility_tier: tier,
+            compatibility_label: metadata?.compatibility_label || "Unrated",
+            compatibility_reasons: metadata?.compatibility_reasons || [],
+          };
+        }));
+        return enrichedItems.filter((item: any) => statusMatches(status, item.compatibility_tier));
+      });
+      return jsonWithCache(req, { items }, 600);
     } catch (e: any) { return err(e.message, 500); }
   }
 
@@ -1225,7 +1271,7 @@ export async function handler(req: Request): Promise<Response> {
     try {
       const reviews = await getSteamReviewSummary(appId);
       if (!reviews) return err("Steam review summary unavailable", 404);
-      return json({ reviews });
+      return jsonWithCache(req, { reviews }, 1800);
     } catch (e: any) {
       return err(e.message, 500);
     }
@@ -1272,6 +1318,9 @@ export async function handler(req: Request): Promise<Response> {
   // ── GET /api/v1/gamedb/steam/trending ─────────────────────────────
   if (method === "GET" && path === "/api/v1/gamedb/steam/trending") {
     try {
+      const cursor = Math.max(0, Number(url.searchParams.get("cursor")) || 0);
+      const requestedCount = Number(url.searchParams.get("count")) || 0;
+      const count = requestedCount > 0 ? Math.min(requestedCount, 80) : 200;
       const feeds = [
         {
           feed: "featured",
@@ -1347,7 +1396,11 @@ export async function handler(req: Request): Promise<Response> {
         });
       };
 
-      const items = (await Promise.all(feeds.map(parseFeed))).flat().slice(0, 200);
+      const allItems = await cacheValue("steam:trending:basic", 10 * 60_000, async () => {
+        return (await Promise.all(feeds.map(parseFeed))).flat().slice(0, 200);
+      });
+      const items = allItems.slice(cursor, cursor + count);
+      const nextCursor = cursor + count < allItems.length ? cursor + count : null;
       if (url.searchParams.get("details") === "1") {
         const limit = Math.min(Number(url.searchParams.get("limit")) || 80, items.length);
         const detailedItems = await Promise.all(items.slice(0, limit).map(async (item) => {
@@ -1369,10 +1422,10 @@ export async function handler(req: Request): Promise<Response> {
             reviews,
           };
         }));
-        return json({ items: detailedItems });
+        return jsonWithCache(req, { items: detailedItems, nextCursor }, 600);
       }
 
-      return json({ items });
+      return jsonWithCache(req, { items, nextCursor }, 600);
     } catch (e: any) { return err(e.message, 500); }
   }
 
