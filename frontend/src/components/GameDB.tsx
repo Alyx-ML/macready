@@ -668,9 +668,7 @@ function GameListView({
             />
           </div>
           
-          <div className="w-full h-px bg-white/5 my-10" />
-
-          <CardSilkField id="game-cards" className="left-1/2 w-screen -translate-x-1/2 rounded-none border-x-0 border-b-0 px-4 py-10 sm:px-6">
+          <CardSilkField id="game-cards" className="left-1/2 w-screen -translate-x-1/2 rounded-none border-x-0 border-y-0 px-4 py-10 sm:px-6">
             <div className="relative z-10 mx-auto max-w-[1600px]">
               <ScrollShadow
                 hideScrollBar

@@ -30,9 +30,6 @@ const APPLE_MENU_ITEMS: MenuItemOption[] = [
   { label: "About MacReady", action: "about" },
   { type: "separator" },
   { label: "Preferences...", action: "preferences", shortcut: "⌘," },
-  { label: "Recent Games", action: "games", hasSubmenu: true },
-  { type: "separator" },
-  { label: "MacReady Help", action: "support" },
 ];
 
 const MENUS: MenuConfig[] = [
