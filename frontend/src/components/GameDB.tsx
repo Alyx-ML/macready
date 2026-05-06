@@ -17,6 +17,8 @@ type MainView = "home" | "compatibility";
 
 const COMPATIBILITY_VISIBLE_COUNT_KEY = "macready:compatibility:visible-count";
 const COMPATIBILITY_SCROLL_TOP_KEY = "macready:compatibility:scroll-top";
+const INITIAL_COMPATIBILITY_CARD_COUNT = 15;
+const COMPATIBILITY_CARD_LOAD_STEP = 15;
 
 function readSessionNumber(key: string, defaultValue: number) {
   if (typeof window === "undefined") return defaultValue;
@@ -356,7 +358,7 @@ export function GameDB() {
   const [steamLoading, setSteamLoading] = useState(false);
   const [addingSteamId, setAddingSteamId] = useState<string | null>(null);
   const [primaryHardware, setPrimaryHardware] = useState<UserHardware | null>(null);
-  const [compatibilityVisibleSteamCount, setCompatibilityVisibleSteamCount] = useState(() => readSessionNumber(COMPATIBILITY_VISIBLE_COUNT_KEY, 16));
+  const [compatibilityVisibleSteamCount, setCompatibilityVisibleSteamCount] = useState(() => Math.max(INITIAL_COMPATIBILITY_CARD_COUNT, readSessionNumber(COMPATIBILITY_VISIBLE_COUNT_KEY, INITIAL_COMPATIBILITY_CARD_COUNT)));
   const compatibilityScrollTopRef = useRef(readSessionNumber(COMPATIBILITY_SCROLL_TOP_KEY, 0));
   const compatibilityScrollSaveTimer = useRef<number | null>(null);
   const compatibilityImagePreloadCache = useRef<Set<string>>(new Set());
@@ -824,7 +826,7 @@ function GameListView({
   useEffect(() => {
     if (previousCompatibilityCriteriaKey.current === compatibilityCriteriaKey) return;
     previousCompatibilityCriteriaKey.current = compatibilityCriteriaKey;
-    setVisibleSteamCount(16);
+    setVisibleSteamCount(INITIAL_COMPATIBILITY_CARD_COUNT);
     onSteamScrollTopChange(0);
     if (steamScrollerRef.current) {
       steamScrollerRef.current.scrollTop = 0;
@@ -848,7 +850,7 @@ function GameListView({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setVisibleSteamCount((count) => Math.min(count + 10, exploreGames.length));
+          setVisibleSteamCount((count) => Math.min(count + COMPATIBILITY_CARD_LOAD_STEP, exploreGames.length));
         }
       },
       { rootMargin: "420px" }
@@ -859,8 +861,9 @@ function GameListView({
 
   const topSellerGames = exploreGames.filter((game) => game.feed === "top_sellers");
   const newReleaseGames = exploreGames.filter((game) => game.feed === "new_releases");
-  const visibleTopSellerGames = topSellerGames.slice(0, Math.ceil(visibleSteamCount * 0.6));
-  const visibleNewReleaseGames = newReleaseGames.slice(0, Math.max(0, visibleSteamCount - visibleTopSellerGames.length));
+  const visibleCompatibilityCount = Math.max(INITIAL_COMPATIBILITY_CARD_COUNT, visibleSteamCount);
+  const visibleTopSellerGames = topSellerGames.slice(0, visibleCompatibilityCount);
+  const visibleNewReleaseGames = newReleaseGames.slice(0, Math.max(0, visibleCompatibilityCount - visibleTopSellerGames.length));
   const filteredSteamCatalog = useMemo(() => {
     if (!statusFilter) return [];
     return steamGamesWithLocalData
@@ -997,7 +1000,7 @@ function GameListView({
                   const node = event.currentTarget;
                   onSteamScrollTopChange(node.scrollTop);
                   if (node.scrollTop + node.clientHeight >= node.scrollHeight - 420) {
-                    setVisibleSteamCount((count) => Math.min(count + 12, exploreGames.length));
+                    setVisibleSteamCount((count) => Math.min(count + COMPATIBILITY_CARD_LOAD_STEP, exploreGames.length));
                   }
                 }}
               >
@@ -1011,6 +1014,7 @@ function GameListView({
                         onSelect={onAddSteamGame}
                         onOpenDetail={onOpenDetail}
                         hardware={primaryHardware}
+                        eagerCount={INITIAL_COMPATIBILITY_CARD_COUNT}
                       />
                     </section>
                   )}
@@ -2789,13 +2793,14 @@ function steamCardEstimate(game: any, hardware?: UserHardware | null) {
   return chip ? `${chip}: No Mac reports` : "No Mac reports";
 }
 
-function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail, hardware }: { games: any[]; addingSteamId: string | null; onSelect: (g: any) => void; onOpenDetail: (id: number) => void; hardware?: UserHardware | null }) {
+function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail, hardware, eagerCount = 0 }: { games: any[]; addingSteamId: string | null; onSelect: (g: any) => void; onOpenDetail: (id: number) => void; hardware?: UserHardware | null; eagerCount?: number }) {
   if (games.length === 0) return null;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      {games.map(r => {
+      {games.map((r, index) => {
         const isLocal = r.isLocal;
         const tier = isLocal ? (r.aggregate_tier || r.latest_test?.status) : null;
+        const loadImmediately = index < eagerCount;
         return (
           <EdgeLightWrapper 
             key={r.steam_app_id}
@@ -2814,7 +2819,7 @@ function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail, hardware 
               )}
               <img
                 src={r.cover_art_url}
-                loading="lazy"
+                loading={loadImmediately ? "eager" : "lazy"}
                 decoding="async"
                 width={460}
                 height={215}
