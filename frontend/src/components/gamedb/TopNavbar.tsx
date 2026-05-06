@@ -437,6 +437,10 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
     if (action === "lock-screen") {
       return;
     }
+    if (action === "crossover") {
+      window.open("https://www.codeweavers.com/crossover?srsltid=AfmBOorodSBdq9-HAwE6Xnj3kfWI5WHH09X9RkZoO0CC-Lg1eUpgA44v", "_blank", "noopener,noreferrer");
+      return;
+    }
     switch (action) {
       case "home":
       case "about":
@@ -445,7 +449,6 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
       case "compatibility":
       case "hardware":
       case "steam":
-      case "crossover":
         focusSearch();
         break;
       case "reports":
