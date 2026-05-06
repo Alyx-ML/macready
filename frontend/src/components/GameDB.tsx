@@ -25,10 +25,10 @@ function formatLockTime() {
 }
 
 function formatLockDate() {
-  return new Date().toLocaleDateString("en-GB", {
-    weekday: "long",
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "short",
     day: "numeric",
-    month: "long",
+    month: "short",
   });
 }
 
@@ -481,26 +481,64 @@ export function GameDB() {
           }}
           onFocus={() => undefined}
         >
-          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_50%_72%,rgba(72,94,128,0.2),transparent_36%),linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.78))]" />
-          <span className="pointer-events-none absolute inset-x-0 top-[18vh] flex flex-col items-center px-6 text-center sm:top-[16vh]">
-            <span className="mb-5 text-[14px] font-medium tracking-tight text-white/62 sm:text-[15px]">
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(230,242,255,0.2),transparent_22%),radial-gradient(circle_at_50%_58%,rgba(150,184,210,0.12),transparent_34%),linear-gradient(180deg,rgba(0,0,0,0.1),rgba(0,0,0,0.56))]" />
+          <span className="pointer-events-none absolute inset-x-0 top-[7vh] flex flex-col items-center px-6 text-center sm:top-[6vh]">
+            <span className="mb-[-12px] text-[18px] font-semibold tracking-[-0.02em] text-white/64 [text-shadow:0_1px_16px_rgba(255,255,255,0.22),0_2px_14px_rgba(0,0,0,0.42)] sm:mb-[-18px] sm:text-[22px]">
               {lockDate}
             </span>
-            <span className="h-[112px] w-[min(520px,calc(100vw-48px))] sm:h-[138px]">
-              <LiquidGlass
-                cornerRadius={42}
-                padding="0"
-                aberrationIntensity={1.55}
-                elasticity={0.18}
-                className="rounded-[42px] border border-white/[0.14] bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_32px_90px_rgba(0,0,0,0.48)]"
+            <svg
+              viewBox="0 0 760 220"
+              className="h-[142px] w-[min(760px,calc(100vw-24px))] overflow-visible sm:h-[198px]"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="tahoe-clock-fill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="rgba(235,245,250,0.34)" />
+                  <stop offset="42%" stopColor="rgba(190,214,228,0.2)" />
+                  <stop offset="100%" stopColor="rgba(245,250,252,0.28)" />
+                </linearGradient>
+                <filter id="tahoe-clock-depth" x="-8%" y="-10%" width="116%" height="120%">
+                  <feDropShadow dx="0" dy="1.4" stdDeviation="0.8" floodColor="rgba(0,0,0,0.28)" />
+                </filter>
+              </defs>
+              <text
+                x="380"
+                y="158"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontFamily="Aeonik, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+                fontSize="148"
+                fontWeight="700"
+                letterSpacing="0"
+                fill="url(#tahoe-clock-fill)"
+                filter="url(#tahoe-clock-depth)"
               >
-                <span className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),transparent_28%,rgba(255,255,255,0.07)_72%,transparent)]" />
-                <span className="relative z-10 flex h-full items-center justify-center font-semibold tabular-nums tracking-[-0.055em] text-white/92 [text-shadow:0_4px_34px_rgba(255,255,255,0.24)] text-[76px] sm:text-[104px]">
-                  {lockTime}
-                </span>
-              </LiquidGlass>
+                {lockTime}
+              </text>
+              <text
+                x="380"
+                y="158"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontFamily="Aeonik, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+                fontSize="148"
+                fontWeight="700"
+                letterSpacing="0"
+                fill="rgba(255,255,255,0.08)"
+              >
+                {lockTime}
+              </text>
+            </svg>
+          </span>
+          <span className="pointer-events-none absolute inset-x-0 bottom-[12vh] flex flex-col items-center text-center">
+            <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.12] text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_18px_48px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="5.5" y="10" width="13" height="10" rx="2.8" stroke="currentColor" strokeWidth="1.75" />
+                <path d="M8.4 10V7.4C8.4 5.3 10 3.8 12 3.8s3.6 1.5 3.6 3.6V10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+              </svg>
             </span>
-            <span className="mt-6 text-[13px] font-medium text-white/42">Move the pointer to wake MacReady</span>
+            <span className="text-[13px] font-semibold text-white/72">MacReady</span>
+            <span className="mt-1 text-[11px] font-medium text-white/48">Move pointer to wake</span>
           </span>
         </button>
       )}
