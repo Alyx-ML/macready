@@ -44,13 +44,19 @@ function getSizedImageUrl(url: string, size: number) {
     return url.replace(/\/\d+x\d+bb\.(png|jpg|jpeg|webp)(\?.*)?$/i, `/${size}x${size}bb.$1$2`);
   }
 
-  if (url.startsWith("http") && (url.includes("9to5mac.com/") || url.includes("macrumors.com/") || url.includes("appleinsider.com/"))) {
+  if (url.startsWith("http") && (url.includes("9to5mac.com/") || url.includes("appleinsider.com/"))) {
     const imageUrl = new URL(url);
     imageUrl.searchParams.set("w", String(size));
     return imageUrl.toString();
   }
 
   return url;
+}
+
+function getImageSrcSet(url: string, sizes: number[]) {
+  const entries = sizes.map((size) => `${getSizedImageUrl(url, size)} ${size}w`);
+  const uniqueEntries = Array.from(new Set(entries));
+  return uniqueEntries.length > 1 ? uniqueEntries.join(", ") : undefined;
 }
 
 const APPLE_SILICON_CHIPS = [
@@ -1113,6 +1119,8 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                   {leadArticle.image_url && (
                     <img
                       src={getSizedImageUrl(leadArticle.image_url, 800)}
+                      srcSet={getImageSrcSet(leadArticle.image_url, [480, 640, 800, 1200])}
+                      sizes="(max-width: 1023px) calc(100vw - 32px), 44vw"
                       alt=""
                       loading="eager"
                       decoding="async"
@@ -1152,6 +1160,8 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                       {article.image_url && (
                         <img
                           src={getSizedImageUrl(article.image_url, 160)}
+                          srcSet={getImageSrcSet(article.image_url, [128, 160, 240])}
+                          sizes="96px"
                           alt=""
                           loading="lazy"
                           decoding="async"
@@ -1199,6 +1209,8 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                           {article.image_url && (
                             <img
                               src={getSizedImageUrl(article.image_url, 640)}
+                              srcSet={getImageSrcSet(article.image_url, [360, 480, 640, 800])}
+                              sizes="(max-width: 767px) calc(100vw - 32px), (max-width: 1535px) calc((100vw - 120px) / 2), 33vw"
                               alt=""
                               loading="lazy"
                               decoding="async"
@@ -1236,7 +1248,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                           >
                             <span className="flex size-[42px] items-center justify-center overflow-hidden rounded-[10px] bg-white/[0.045] text-white/46 ring-1 ring-white/[0.055]">
                               {article.image_url ? (
-                                <img src={getSizedImageUrl(article.image_url, 64)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" />
+                                <img src={getSizedImageUrl(article.image_url, 64)} srcSet={getImageSrcSet(article.image_url, [64, 96, 128])} sizes="42px" alt="" loading="lazy" decoding="async" className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" />
                               ) : Icon ? (
                                 <Icon className="size-4" strokeWidth={1.75} />
                               ) : null}
