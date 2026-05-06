@@ -179,6 +179,8 @@ export function GameDB() {
   const [mainView, setMainView] = useState<MainView>("home");
   const [pageTransitionKey, setPageTransitionKey] = useState(0);
   const [user, setUser] = useState<any>(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const lockedAtRef = useRef(0);
   const runPageCrossfade = useCallback((update: () => void, afterUpdate?: () => void) => {
     update();
     afterUpdate?.();
@@ -195,6 +197,12 @@ export function GameDB() {
     }
   }, [runPageCrossfade, user]);
   const handleNavAction = useCallback((action: string) => {
+    if (action === "lock-screen") {
+      lockedAtRef.current = Date.now();
+      setIsLocked(true);
+      return;
+    }
+
     if (action === "home" || action === "about" || action === "news" || action === "community") {
       runPageCrossfade(() => {
         setDetailId(null);
@@ -225,6 +233,21 @@ export function GameDB() {
       });
     }
   }, [runPageCrossfade]);
+
+  useEffect(() => {
+    const videos = Array.from(document.querySelectorAll("video"));
+
+    if (isLocked) {
+      videos.forEach((video) => video.pause());
+      return;
+    }
+
+    videos.forEach((video) => {
+      if (video.autoplay) {
+        video.play().catch(() => undefined);
+      }
+    });
+  }, [isLocked]);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -321,12 +344,18 @@ export function GameDB() {
 
   return (
     <div className="min-h-screen bg-black text-white relative">
+      <style>{`
+        .macready-site-paused * {
+          animation-play-state: paused !important;
+        }
+      `}</style>
       <div className="pointer-events-none fixed inset-0 z-[9999] mix-blend-overlay opacity-[0.12]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
-      <div className="mac-menu-bar fixed inset-x-0 top-0 z-30">
-        <TopNavbar user={user} onAccountClick={handleAccountClick} onNavigate={handleNavAction} />
-      </div>
+      <div className={isLocked ? "macready-site-paused" : undefined}>
+        <div className="mac-menu-bar fixed inset-x-0 top-0 z-30">
+          <TopNavbar user={user} onAccountClick={handleAccountClick} onNavigate={handleNavAction} />
+        </div>
 
-      <div className="relative min-h-screen">
+        <div className="relative min-h-screen">
         <AnimatePresence initial={false} mode="sync">
           <motion.main
             key={pageViewKey}
@@ -409,6 +438,31 @@ export function GameDB() {
         </AnimatePresence>
       </div>
       <FloatingAgentChat mode="gamedb" onFileChange={() => qc.invalidateQueries({ queryKey: ["gamedb", "games"] })} />
+      </div>
+      {isLocked && (
+        <button
+          type="button"
+          aria-label="Move pointer to unlock MacReady"
+          className="fixed inset-0 z-[10000] cursor-default bg-black/42 text-white backdrop-blur-xl"
+          onPointerMove={() => {
+            if (Date.now() - lockedAtRef.current < 300) return;
+            setIsLocked(false);
+          }}
+          onFocus={() => undefined}
+        >
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.09),transparent_34%),linear-gradient(180deg,rgba(0,0,0,0.16),rgba(0,0,0,0.7))]" />
+          <span className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center">
+            <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_16px_50px_rgba(0,0,0,0.4)]">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="5.5" y="10" width="13" height="10" rx="2.8" stroke="currentColor" strokeWidth="1.75" />
+                <path d="M8.4 10V7.4C8.4 5.3 10 3.8 12 3.8s3.6 1.5 3.6 3.6V10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+              </svg>
+            </span>
+            <span className="text-[22px] font-semibold tracking-tight">MacReady Locked</span>
+            <span className="mt-2 text-[13px] text-white/48">Move the pointer to wake the site</span>
+          </span>
+        </button>
+      )}
     </div>
   );
 }

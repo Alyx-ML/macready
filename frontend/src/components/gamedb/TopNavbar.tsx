@@ -8,6 +8,7 @@ interface MenuItemOption {
   shortcut?: string;
   type?: "item" | "separator";
   hasSubmenu?: boolean;
+  icon?: "lock";
 }
 
 interface MenuConfig {
@@ -30,6 +31,31 @@ const APPLE_MENU_ITEMS: MenuItemOption[] = [
   { label: "About MacReady", action: "about" },
   { type: "separator" },
   { label: "Preferences...", action: "preferences", shortcut: "⌘," },
+  { type: "separator" },
+  { label: "Lock Screen", action: "lock-screen", icon: "lock" },
+];
+
+const APPLE_CALENDAR_ITEMS = [
+  {
+    date: "Jun 8",
+    title: "WWDC26 Keynote",
+    detail: "Apple platforms, AI updates, developer tools",
+  },
+  {
+    date: "Jun 8-12",
+    title: "WWDC26 Sessions",
+    detail: "Online sessions, labs, and Apple Park special event",
+  },
+  {
+    date: "Sep 2026",
+    title: "iPhone event window",
+    detail: "Expected iPhone, Apple Watch, and AirPods launches",
+  },
+  {
+    date: "Oct 2026",
+    title: "Mac and iPad window",
+    detail: "Expected Mac, iPad, and accessory updates",
+  },
 ];
 
 const MENUS: MenuConfig[] = [
@@ -85,6 +111,15 @@ const MOBILE_MENU_ITEMS: MenuItemOption[] = [
   { label: "Submit Report", action: "submit-report" },
   { label: "Support", action: "support" },
 ];
+
+function LockScreenIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="mr-2 opacity-85">
+      <rect x="5.5" y="10" width="13" height="10" rx="2.8" stroke="currentColor" strokeWidth="1.75" />
+      <path d="M8.4 10V7.4C8.4 5.3 10 3.8 12 3.8s3.6 1.5 3.6 3.6V10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function MenuDropdown({ isOpen, onClose, items, position, onAction, onPointerEnter, onPointerLeave }: MenuDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -176,6 +211,7 @@ function MenuDropdown({ isOpen, onClose, items, position, onAction, onPointerEnt
               }}
             >
               <span className="flex items-center">
+                {item.icon === "lock" && <LockScreenIcon />}
                 {item.label}
                 {item.hasSubmenu && (
                   <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="ml-1.5 opacity-55">
@@ -222,6 +258,36 @@ function formatTime() {
   });
 }
 
+function AppleCalendarPopover({ isOpen }: { isOpen: boolean }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="absolute right-3 top-9 z-[65] w-[310px] overflow-hidden rounded-[18px] border border-white/[0.08] bg-black/72 p-3 text-white shadow-[0_24px_70px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.08),transparent_38%),radial-gradient(circle_at_86%_100%,rgba(120,150,210,0.09),transparent_42%)]" />
+      <div className="relative z-10">
+        <div className="flex items-end justify-between border-b border-white/[0.08] pb-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">Apple Calendar</p>
+            <h2 className="mt-1 text-[17px] font-semibold tracking-tight">Upcoming</h2>
+          </div>
+          <span className="rounded-full bg-white/[0.07] px-2.5 py-1 text-[11px] text-white/60">2026</span>
+        </div>
+        <div className="mt-2 space-y-1">
+          {APPLE_CALENDAR_ITEMS.map((item) => (
+            <div key={`${item.date}-${item.title}`} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 rounded-xl px-2 py-2.5 hover:bg-white/[0.055]">
+              <span className="text-[11px] font-medium text-white/52">{item.date}</span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium leading-tight text-white/88">{item.title}</span>
+                <span className="mt-1 block text-[11px] leading-snug text-white/42">{item.detail}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -242,6 +308,7 @@ function focusSearch() {
 export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | null; onAccountClick: () => void; onNavigate: (action: string) => void }) {
   const [currentTime, setCurrentTime] = useState(() => formatTime());
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   const [scrolled, setScrolled] = useState(false);
 
@@ -369,6 +436,9 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
 
   const handleMenuAction = useCallback((action: string) => {
     onNavigate(action);
+    if (action === "lock-screen") {
+      return;
+    }
     switch (action) {
       case "home":
       case "about":
@@ -527,11 +597,19 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
               <span className="max-w-[160px] truncate">{user ? user.display_name : "Sign in"}</span>
             </button>
             <span className="ml-1 inline-flex h-7 select-none items-center px-2 text-[12px] font-medium leading-none text-white/85 font-mono-tabular tracking-[-0.005em]">
-              {currentTime}
+              <button
+                type="button"
+                onClick={() => setShowCalendar((value) => !value)}
+                className="rounded-md px-1.5 py-1 text-white/85 transition-colors hover:bg-white/[0.07] hover:text-white"
+              >
+                {currentTime}
+              </button>
             </span>
           </div>
         </div>
       </div>
+
+      <AppleCalendarPopover isOpen={showCalendar} />
 
       <MenuDropdown
         isOpen={activeMenu === "apple"}
