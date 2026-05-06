@@ -84,7 +84,7 @@ const MENUS: MenuConfig[] = [
       { type: "separator" },
       { label: "Steam", action: "steam" },
       { label: "Crossover", action: "crossover" },
-      { label: "Support", action: "support" },
+      { label: "Apple", action: "apple-site" },
     ],
   },
   {
@@ -439,6 +439,10 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
     }
     if (action === "crossover") {
       window.open("https://www.codeweavers.com/crossover?srsltid=AfmBOorodSBdq9-HAwE6Xnj3kfWI5WHH09X9RkZoO0CC-Lg1eUpgA44v", "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (action === "apple-site") {
+      window.open("https://www.apple.com/", "_blank", "noopener,noreferrer");
       return;
     }
     switch (action) {
