@@ -49,6 +49,13 @@ const MAC_NEWS_FEEDS: MacNewsFeed[] = [
   { source: "9to5Mac", url: "https://9to5mac.com/guides/mac/feed/" },
   { source: "MacRumors", url: "https://feeds.macrumors.com/MacRumors-All" },
   { source: "AppleInsider", url: "https://appleinsider.com/rss/news" },
+  { source: "Apple Newsroom", url: "https://www.apple.com/newsroom/rss-feed.rss" },
+  { source: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/apple" },
+  { source: "Cult of Mac", url: "https://www.cultofmac.com/feed/" },
+  { source: "Daring Fireball", url: "https://daringfireball.net/feeds/main" },
+  { source: "Six Colors", url: "https://sixcolors.com/feed/" },
+  { source: "The Verge", url: "https://www.theverge.com/rss/apple/index.xml" },
+  { source: "TidBITS", url: "https://tidbits.com/feed/" },
   { source: "CodeWeavers", url: "https://www.codeweavers.com/blog/?rss=1", category: "CrossOver" },
   { source: "Apple Developer", url: "https://developer.apple.com/news/releases/rss/releases.rss", category: "Performance", include: /\b(?:macOS\s+26|Tahoe)\b.{0,80}\b(beta|release candidate|RC|release notes|security update|released|available|update)\b/i },
 ];
@@ -77,9 +84,25 @@ const STEAM_SEARCH_INDEX_TERMS = [
 ];
 
 const MAC_NEWS_PATTERNS = [
+  /\bapple\b/i,
   /\bmac\b/i,
   /\bmacos\b/i,
+  /\bios\b/i,
+  /\bipados\b/i,
+  /\btvos\b/i,
+  /\bwatchos\b/i,
+  /\bvisionos\b/i,
   /\bapple silicon\b/i,
+  /\bapp store\b/i,
+  /\bapple arcade\b/i,
+  /\bapple tv\b/i,
+  /\bapple watch\b/i,
+  /\bairpods\b/i,
+  /\bicloud\b/i,
+  /\biphone\b/i,
+  /\bipad\b/i,
+  /\bvision pro\b/i,
+  /\bwwdc\b/i,
   /\bmacbook\b/i,
   /\bimac\b/i,
   /\bmac mini\b/i,
@@ -123,6 +146,11 @@ function extractFeedTag(block: string, tag: string): string {
   return match ? decodeXml(match[1]).trim() : "";
 }
 
+function extractFeedLink(block: string): string {
+  const atomLink = block.match(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*>/i);
+  return extractFeedTag(block, "link") || (atomLink?.[1] ? decodeXml(atomLink[1]).trim() : "");
+}
+
 function extractFeedCategories(block: string): string[] {
   return Array.from(block.matchAll(/<category\b[^>]*>([\s\S]*?)<\/category>/gi))
     .map((match) => decodeXml(match[1]).trim())
@@ -132,7 +160,7 @@ function extractFeedCategories(block: string): string[] {
 function extractFeedImage(block: string): string {
   const mediaMatch = block.match(/<(?:media:content|media:thumbnail|enclosure)\b[^>]*\burl=["']([^"']+)["']/i);
   if (mediaMatch?.[1]) return decodeXml(mediaMatch[1]);
-  const description = extractFeedTag(block, "description") || extractFeedTag(block, "content:encoded");
+  const description = extractFeedTag(block, "description") || extractFeedTag(block, "summary") || extractFeedTag(block, "content:encoded") || extractFeedTag(block, "content");
   const imageMatch = description.match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i);
   return imageMatch?.[1] ? decodeXml(imageMatch[1]) : "";
 }
@@ -154,16 +182,20 @@ function categoryForNewsItem(title: string, summary: string, sourceCategories: s
 }
 
 function parseMacNewsFeed(xml: string, feed: MacNewsFeed) {
-  return Array.from(xml.matchAll(/<item\b[\s\S]*?<\/item>/gi)).map((match) => {
-    const block = match[0];
+  const blocks = [
+    ...Array.from(xml.matchAll(/<item\b[\s\S]*?<\/item>/gi)).map((match) => match[0]),
+    ...Array.from(xml.matchAll(/<entry\b[\s\S]*?<\/entry>/gi)).map((match) => match[0]),
+  ];
+
+  return blocks.map((block) => {
     const title = extractFeedTag(block, "title");
-    const url = extractFeedTag(block, "link") || extractFeedTag(block, "guid");
-    const rawDescription = extractFeedTag(block, "description") || extractFeedTag(block, "content:encoded");
-    const rawContent = extractFeedTag(block, "content:encoded") || rawDescription;
+    const url = extractFeedLink(block) || extractFeedTag(block, "guid") || extractFeedTag(block, "id");
+    const rawDescription = extractFeedTag(block, "description") || extractFeedTag(block, "summary") || extractFeedTag(block, "content:encoded") || extractFeedTag(block, "content");
+    const rawContent = extractFeedTag(block, "content:encoded") || extractFeedTag(block, "content") || rawDescription;
     const summary = stripNewsHtml(rawDescription);
     const content = stripNewsHtml(rawContent);
     const categories = extractFeedCategories(block);
-    const publishedAt = extractFeedTag(block, "pubDate") || extractFeedTag(block, "dc:date");
+    const publishedAt = extractFeedTag(block, "pubDate") || extractFeedTag(block, "dc:date") || extractFeedTag(block, "published") || extractFeedTag(block, "updated");
     const imageUrl = extractFeedImage(block);
     const category = feed.category || categoryForNewsItem(title, summary, categories);
     const id = `${feed.source}:${url || title}`;
@@ -1097,6 +1129,7 @@ export async function handler(req: Request): Promise<Response> {
     try {
       const feedResults = await Promise.allSettled(MAC_NEWS_FEEDS.map(async (feed) => {
         const res = await fetch(feed.url, {
+          signal: AbortSignal.timeout(12000),
           headers: {
             "Accept": "application/rss+xml, application/xml, text/xml",
             "User-Agent": "MacReady/1.0",
@@ -1108,6 +1141,7 @@ export async function handler(req: Request): Promise<Response> {
 
       const appChartResults = await Promise.allSettled(APP_STORE_CHARTS.map(async (chart) => {
         const res = await fetch(chart.url, {
+          signal: AbortSignal.timeout(12000),
           headers: {
             "Accept": "application/json",
             "User-Agent": "MacReady/1.0",
@@ -1119,6 +1153,7 @@ export async function handler(req: Request): Promise<Response> {
 
       const changelogResult = await Promise.allSettled([CROSSOVER_CHANGELOG_URL].map(async (changelogUrl) => {
         const res = await fetch(changelogUrl, {
+          signal: AbortSignal.timeout(12000),
           headers: {
             "Accept": "text/html",
             "User-Agent": "MacReady/1.0",
@@ -1130,6 +1165,7 @@ export async function handler(req: Request): Promise<Response> {
 
       const macOSReleaseNotesResult = await Promise.allSettled([MACOS_RELEASE_NOTES_COLLECTION_JSON_URL].map(async (collectionUrl) => {
         const collectionRes = await fetch(collectionUrl, {
+          signal: AbortSignal.timeout(12000),
           headers: {
             "Accept": "application/json",
             "User-Agent": "MacReady/1.0",
@@ -1141,6 +1177,7 @@ export async function handler(req: Request): Promise<Response> {
         if (!slug) return [];
 
         const releaseNotesRes = await fetch(releaseNotesJsonUrlFromSlug(slug), {
+          signal: AbortSignal.timeout(12000),
           headers: {
             "Accept": "application/json",
             "User-Agent": "MacReady/1.0",

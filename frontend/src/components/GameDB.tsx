@@ -1079,7 +1079,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
           <section className="flex min-h-[260px] items-center justify-center rounded-[18px] bg-white/[0.025] text-center">
             <div>
               <p className="text-[18px] font-semibold text-white/86">{isLoading ? "Loading Mac news" : "No Mac news returned yet"}</p>
-              <p className="mt-2 text-[13px] text-white/42">Articles from 9to5Mac, MacRumors, and AppleInsider appear here.</p>
+              <p className="mt-2 text-[13px] text-white/42">Articles from Apple-focused sources appear here.</p>
             </div>
           </section>
         ) : activeArticles.length === 0 ? (
