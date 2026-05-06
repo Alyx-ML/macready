@@ -1112,7 +1112,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                 >
                   {leadArticle.image_url && (
                     <img
-                      src={getSizedImageUrl(leadArticle.image_url, 1000)}
+                      src={getSizedImageUrl(leadArticle.image_url, 800)}
                       alt=""
                       loading="eager"
                       decoding="async"
@@ -1151,7 +1151,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                     >
                       {article.image_url && (
                         <img
-                          src={getSizedImageUrl(article.image_url, 240)}
+                          src={getSizedImageUrl(article.image_url, 160)}
                           alt=""
                           loading="lazy"
                           decoding="async"
@@ -1198,7 +1198,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                         >
                           {article.image_url && (
                             <img
-                              src={getSizedImageUrl(article.image_url, 760)}
+                              src={getSizedImageUrl(article.image_url, 640)}
                               alt=""
                               loading="lazy"
                               decoding="async"
@@ -1236,7 +1236,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                           >
                             <span className="flex size-[42px] items-center justify-center overflow-hidden rounded-[10px] bg-white/[0.045] text-white/46 ring-1 ring-white/[0.055]">
                               {article.image_url ? (
-                                <img src={getSizedImageUrl(article.image_url, 96)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" />
+                                <img src={getSizedImageUrl(article.image_url, 64)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" />
                               ) : Icon ? (
                                 <Icon className="size-4" strokeWidth={1.75} />
                               ) : null}
