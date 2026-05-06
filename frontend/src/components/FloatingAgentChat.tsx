@@ -252,7 +252,7 @@ export function FloatingAgentChat({ mode = "dashboard", dashboardName = "__creat
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50">
+    <div className="safe-inline safe-bottom-pad fixed bottom-0 left-0 right-0 z-50">
       <div className="max-w-[860px] mx-auto px-4 sm:px-6 pb-4 relative transition-all duration-300 ease-out" style={{ height: isCollapsed ? 28 : 240 }}>
         {/* Collapsed bar */}
         <div className={`absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out ${isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>

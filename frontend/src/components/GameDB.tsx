@@ -2792,7 +2792,7 @@ function FlickeringFooter() {
   ];
 
   return (
-    <footer id="footer" className="relative z-10 w-full bg-black pb-0">
+    <footer id="footer" className="safe-inline safe-bottom-pad content-auto relative z-10 w-full bg-black">
       <div className="mx-auto flex max-w-[1600px] flex-col p-10 md:flex-row md:items-center md:justify-between">
         <div className="mx-0 flex max-w-xs flex-col items-start justify-start gap-y-5">
           <a href="#" className="flex items-center gap-2">

@@ -474,7 +474,10 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
   }, [onNavigate]);
 
   return (
-    <div className="fixed inset-x-0 top-0 z-[80]">
+    <div
+      className="safe-inline fixed inset-x-0 top-0 z-[80] bg-black/35 supports-[backdrop-filter]:backdrop-blur-2xl"
+      style={{ paddingTop: "var(--safe-top)" }}
+    >
       <style>{`
         .mac-menu-dropdown {
           opacity: 0;
