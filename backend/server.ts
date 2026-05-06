@@ -51,8 +51,6 @@ const MAC_NEWS_FEEDS: MacNewsFeed[] = [
   { source: "AppleInsider", url: "https://appleinsider.com/rss/news" },
   { source: "Apple Newsroom", url: "https://www.apple.com/newsroom/rss-feed.rss" },
   { source: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/apple" },
-  { source: "Cult of Mac", url: "https://www.cultofmac.com/feed/" },
-  { source: "Daring Fireball", url: "https://daringfireball.net/feeds/main" },
   { source: "Six Colors", url: "https://sixcolors.com/feed/" },
   { source: "The Verge", url: "https://www.theverge.com/rss/apple/index.xml" },
   { source: "TidBITS", url: "https://tidbits.com/feed/" },
@@ -84,25 +82,9 @@ const STEAM_SEARCH_INDEX_TERMS = [
 ];
 
 const MAC_NEWS_PATTERNS = [
-  /\bapple\b/i,
   /\bmac\b/i,
   /\bmacos\b/i,
-  /\bios\b/i,
-  /\bipados\b/i,
-  /\btvos\b/i,
-  /\bwatchos\b/i,
-  /\bvisionos\b/i,
   /\bapple silicon\b/i,
-  /\bapp store\b/i,
-  /\bapple arcade\b/i,
-  /\bapple tv\b/i,
-  /\bapple watch\b/i,
-  /\bairpods\b/i,
-  /\bicloud\b/i,
-  /\biphone\b/i,
-  /\bipad\b/i,
-  /\bvision pro\b/i,
-  /\bwwdc\b/i,
   /\bmacbook\b/i,
   /\bimac\b/i,
   /\bmac mini\b/i,
@@ -175,7 +157,7 @@ function categoryForNewsItem(title: string, summary: string, sourceCategories: s
   ) return "Performance";
   const normalizedText = text.toLowerCase();
   if (/\b(review|hands-on|tested|benchmarked)\b/.test(normalizedText)) return "Reviews";
-  if (/\b(crossover|cross over|wine|whisky|game porting toolkit)\b/.test(normalizedText)) return "CrossOver";
+  if (/\b(crossover|codeweavers|whisky|game porting toolkit)\b/.test(normalizedText) || /\bwine\b/.test(normalizedText)) return "CrossOver";
   if (/\b(top|best|roundup|list)\b/.test(normalizedText)) return "Top Lists";
   if (/\b(app store|apple arcade|store release|store update)\b/.test(normalizedText)) return "App Store";
   return "News";
@@ -213,9 +195,11 @@ function parseMacNewsFeed(xml: string, feed: MacNewsFeed) {
     };
   }).filter((item) => {
     const text = `${item.title} ${item.summary}`.toLowerCase();
+    const titleText = item.title.toLowerCase();
     if (!item.title || !item.url) return false;
     if (feed.include) return feed.include.test(text);
     if (feed.category) return true;
+    if (/\b(iphones?|ipads?|airpods|apple watch|vision pro)\b/i.test(titleText)) return false;
     return MAC_NEWS_PATTERNS.some((pattern) => pattern.test(text));
   });
 }
