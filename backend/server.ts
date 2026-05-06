@@ -279,7 +279,7 @@ function parseAppleAppLookup(payload: any) {
 
 function parseAppleAppSearchResult(app: any, index: number, searchTerm: string) {
   const details = parseAppleAppLookup({ results: [app] });
-  if (!details?.metadata?.appId || !details.title || !details.url) return null;
+  if (!details?.appId || !details.title || !details.url) return null;
 
   const maker = details.metadata.maker || "";
   const genres = details.metadata.genres || [];
@@ -289,7 +289,7 @@ function parseAppleAppSearchResult(app: any, index: number, searchTerm: string) 
     : `${details.title} matched "${searchTerm}" on the Mac App Store.${genreText}`;
 
   return {
-    id: `Apple App Store Search:${details.metadata.appId}:${index}`,
+    id: `Apple App Store Search:${details.appId}:${index}`,
     title: details.title,
     url: details.url,
     source: "Apple App Store",
@@ -300,6 +300,7 @@ function parseAppleAppSearchResult(app: any, index: number, searchTerm: string) 
     image_url: details.image_url,
     metadata: {
       ...details.metadata,
+      appId: details.appId,
       chartTitle: "Mac App Store Search",
     },
   };
@@ -1071,7 +1072,7 @@ export async function handler(req: Request): Promise<Response> {
       apiUrl.searchParams.set("term", q);
       apiUrl.searchParams.set("country", "us");
       apiUrl.searchParams.set("media", "software");
-      apiUrl.searchParams.set("entity", "macSoftware");
+      apiUrl.searchParams.set("entity", "software");
       apiUrl.searchParams.set("limit", String(limit));
 
       const res = await fetch(apiUrl.toString(), {

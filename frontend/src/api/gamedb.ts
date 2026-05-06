@@ -316,7 +316,7 @@ export async function searchAppStore(params: { q: string }): Promise<MacNewsItem
     apiUrl.searchParams.set("term", q);
     apiUrl.searchParams.set("country", "us");
     apiUrl.searchParams.set("media", "software");
-    apiUrl.searchParams.set("entity", "macSoftware");
+    apiUrl.searchParams.set("entity", "software");
     apiUrl.searchParams.set("limit", "24");
     const payload = await fetchAppleSearchJsonp(apiUrl.toString());
     return (Array.isArray(payload?.results) ? payload.results : [])
