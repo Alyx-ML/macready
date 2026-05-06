@@ -79,7 +79,7 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
   const ramOptions = ["8","16","18","24","32","36","48","64","96","128","192"];
 
   const memberSince = new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const hardwareImage = `${import.meta.env.BASE_URL}imgs/account-hardware-mac.png`;
+  const hardwareImage = `${import.meta.env.BASE_URL}imgs/account-hardware-mac.webp`;
 
   return (
     <div className="py-8 animate-in">
