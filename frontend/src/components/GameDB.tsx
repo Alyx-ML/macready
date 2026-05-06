@@ -317,20 +317,23 @@ export function GameDB() {
   const [steamResults, setSteamResults] = useState<SteamCatalogItem[]>([]);
   const [steamLoading, setSteamLoading] = useState(false);
   const [addingSteamId, setAddingSteamId] = useState<string | null>(null);
-  const [trendingSteam, setTrendingSteam] = useState<SteamCatalogItem[]>([]);
+  const compatibilityImagePreloadCache = useRef<Set<string>>(new Set());
 
-  const filterKey = [search, statusFilter, wineFilter, macosFilter, hwFilter];
+  const filterKey = [statusFilter, wineFilter, macosFilter, hwFilter];
   const { data: games, isLoading } = useQuery({
     queryKey: ["gamedb", "games", ...filterKey],
     queryFn: () =>
       listGames({
-        search: search || undefined,
         status: statusFilter || undefined,
         wine_version: wineFilter || undefined,
         macos_version: macosFilter || undefined,
         hardware: hwFilter || undefined,
       }),
     enabled: mainView === "compatibility" || detailId !== null,
+    staleTime: 10 * 60_000,
+    gcTime: 60 * 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
   const { data: macNews, isLoading: isMacNewsLoading } = useQuery({
     queryKey: ["gamedb", "mac-news", "structured-release-notes"],
@@ -345,14 +348,34 @@ export function GameDB() {
     });
   }, []);
 
+  const { data: trendingSteam = [], isLoading: isTrendingSteamLoading } = useQuery({
+    queryKey: ["gamedb", "steam", "trending"],
+    queryFn: async () => {
+      const items = await getSteamTrending();
+      return items.filter((item: SteamCatalogItem) => hasSteamCover(item) && !isAdultSteamItem(item) && !isNonGameSteamItem(item));
+    },
+    enabled: mainView === "compatibility",
+    staleTime: 30 * 60_000,
+    gcTime: 2 * 60 * 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
+  });
+
   useEffect(() => {
-    if (mainView !== "compatibility") return;
-    getSteamTrending()
-      .then((items) => {
-        setTrendingSteam(items.filter((item: SteamCatalogItem) => hasSteamCover(item) && !isAdultSteamItem(item) && !isNonGameSteamItem(item)));
-      })
-      .catch(err => console.error("Failed to fetch trending:", err));
-  }, [mainView]);
+    if (mainView !== "compatibility" || trendingSteam.length === 0) return;
+    const urls = trendingSteam
+      .map((item) => item.steam_app_id ? steamHeaderImageUrl(item.steam_app_id) : item.cover_art_url)
+      .filter((url): url is string => Boolean(url))
+      .slice(0, 24);
+
+    urls.forEach((url) => {
+      if (compatibilityImagePreloadCache.current.has(url)) return;
+      compatibilityImagePreloadCache.current.add(url);
+      const image = new Image();
+      image.decoding = "async";
+      image.src = url;
+    });
+  }, [mainView, trendingSteam]);
 
   useEffect(() => {
     if (!search.trim()) { setSteamResults([]); return; }
@@ -394,9 +417,9 @@ export function GameDB() {
   };
 
   const enableCompatibilityData = mainView === "compatibility";
-  const { data: distinctWine } = useQuery({ queryKey: ["gamedb", "distinct", "wine_version"], queryFn: () => getDistinctValues("wine_version"), staleTime: 60_000, enabled: enableCompatibilityData });
-  const { data: distinctMacos } = useQuery({ queryKey: ["gamedb", "distinct", "macos_version"], queryFn: () => getDistinctValues("macos_version"), staleTime: 60_000, enabled: enableCompatibilityData });
-  const { data: distinctHw } = useQuery({ queryKey: ["gamedb", "distinct", "hardware"], queryFn: () => getDistinctValues("hardware"), staleTime: 60_000, enabled: enableCompatibilityData });
+  const { data: distinctWine } = useQuery({ queryKey: ["gamedb", "distinct", "wine_version"], queryFn: () => getDistinctValues("wine_version"), staleTime: 30 * 60_000, gcTime: 2 * 60 * 60_000, refetchOnWindowFocus: false, enabled: enableCompatibilityData });
+  const { data: distinctMacos } = useQuery({ queryKey: ["gamedb", "distinct", "macos_version"], queryFn: () => getDistinctValues("macos_version"), staleTime: 30 * 60_000, gcTime: 2 * 60 * 60_000, refetchOnWindowFocus: false, enabled: enableCompatibilityData });
+  const { data: distinctHw } = useQuery({ queryKey: ["gamedb", "distinct", "hardware"], queryFn: () => getDistinctValues("hardware"), staleTime: 30 * 60_000, gcTime: 2 * 60 * 60_000, refetchOnWindowFocus: false, enabled: enableCompatibilityData });
 
   const pageViewKey = [pageTransitionKey, showAccountPage ? "account" : detailId !== null ? `game-${detailId}` : mainView].join(":");
 
@@ -487,6 +510,7 @@ export function GameDB() {
                 addingSteamId={addingSteamId}
                 onAddSteamGame={handleAddSteamGame}
                 trendingSteam={trendingSteam}
+                isTrendingSteamLoading={isTrendingSteamLoading}
               />
             )}
       </div>
@@ -577,7 +601,7 @@ function GameListView({
   games, isLoading, search, setSearch, statusFilter, setStatusFilter,
   distinctWine,
   wineFilter, setWineFilter, macosFilter, setMacosFilter, hwFilter, setHwFilter,
-  onOpenDetail, steamResults, steamLoading, addingSteamId, onAddSteamGame, trendingSteam
+  onOpenDetail, steamResults, steamLoading, addingSteamId, onAddSteamGame, trendingSteam, isTrendingSteamLoading
 }: {
   games: Game[]; isLoading: boolean; search: string; setSearch: (s: string) => void;
   statusFilter: string; setStatusFilter: (s: string) => void;
@@ -588,6 +612,7 @@ function GameListView({
   onOpenDetail: (id: number) => void;
   steamResults: any[]; steamLoading: boolean; addingSteamId: string | null; onAddSteamGame: (item: any) => void;
   trendingSteam: any[];
+  isTrendingSteamLoading: boolean;
 }) {
   const [hoveredFilter, setHoveredFilter] = useState<string | null>(null);
   const [openFilterMenu, setOpenFilterMenu] = useState<string | null>(null);
@@ -868,7 +893,7 @@ function GameListView({
               </ScrollShadow>
               <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-28 bg-gradient-to-t from-black via-black/80 to-transparent" />
             </div>
-            {filtered.length === 0 && trendingSteam.length === 0 && (
+            {filtered.length === 0 && trendingSteam.length === 0 && isTrendingSteamLoading && (
               <div className="relative z-10 mx-auto max-w-[1600px] py-24 text-center">
                 <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin mx-auto mb-4" />
                 <p className="text-[14px] text-white/40">Loading trending games...</p>
