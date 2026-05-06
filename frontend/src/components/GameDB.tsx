@@ -1373,7 +1373,7 @@ function AppStoreFeed({
   return (
     <section className="grid gap-10">
       <div>
-        <div className="mx-auto mb-7 w-full max-w-[360px]">
+        <div className="mx-auto mb-7 mt-6 w-full max-w-[360px]">
           <label className="relative block">
             <span className="absolute inset-y-0 left-4 z-10 flex items-center text-white/88">
               <svg
