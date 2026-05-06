@@ -16,6 +16,22 @@ import { Apple, ChevronLeft, ChevronRight, Gamepad2, ListOrdered, ScrollText, Sh
 
 type MainView = "home" | "compatibility";
 
+function formatLockTime() {
+  return new Date().toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatLockDate() {
+  return new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
 const APPLE_SILICON_CHIPS = [
   "M1", "M1 Pro", "M1 Max", "M1 Ultra",
   "M2", "M2 Pro", "M2 Max", "M2 Ultra",
@@ -180,6 +196,8 @@ export function GameDB() {
   const [pageTransitionKey, setPageTransitionKey] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [isLocked, setIsLocked] = useState(false);
+  const [lockTime, setLockTime] = useState(() => formatLockTime());
+  const [lockDate, setLockDate] = useState(() => formatLockDate());
   const lockedAtRef = useRef(0);
   const runPageCrossfade = useCallback((update: () => void, afterUpdate?: () => void) => {
     update();
@@ -238,6 +256,8 @@ export function GameDB() {
     const videos = Array.from(document.querySelectorAll("video"));
 
     if (isLocked) {
+      setLockTime(formatLockTime());
+      setLockDate(formatLockDate());
       videos.forEach((video) => video.pause());
       return;
     }
@@ -247,6 +267,17 @@ export function GameDB() {
         video.play().catch(() => undefined);
       }
     });
+  }, [isLocked]);
+
+  useEffect(() => {
+    if (!isLocked) return;
+
+    const interval = window.setInterval(() => {
+      setLockTime(formatLockTime());
+      setLockDate(formatLockDate());
+    }, 1000);
+
+    return () => window.clearInterval(interval);
   }, [isLocked]);
 
   // Filters
@@ -443,23 +474,33 @@ export function GameDB() {
         <button
           type="button"
           aria-label="Move pointer to unlock MacReady"
-          className="fixed inset-0 z-[10000] cursor-default bg-black/42 text-white backdrop-blur-xl"
+          className="fixed inset-0 z-[10000] cursor-default overflow-hidden bg-black/36 text-white backdrop-blur-2xl"
           onPointerMove={() => {
             if (Date.now() - lockedAtRef.current < 300) return;
             setIsLocked(false);
           }}
           onFocus={() => undefined}
         >
-          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.09),transparent_34%),linear-gradient(180deg,rgba(0,0,0,0.16),rgba(0,0,0,0.7))]" />
-          <span className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center">
-            <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_16px_50px_rgba(0,0,0,0.4)]">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="5.5" y="10" width="13" height="10" rx="2.8" stroke="currentColor" strokeWidth="1.75" />
-                <path d="M8.4 10V7.4C8.4 5.3 10 3.8 12 3.8s3.6 1.5 3.6 3.6V10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-              </svg>
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_50%_72%,rgba(72,94,128,0.2),transparent_36%),linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.78))]" />
+          <span className="pointer-events-none absolute inset-x-0 top-[18vh] flex flex-col items-center px-6 text-center sm:top-[16vh]">
+            <span className="mb-5 text-[14px] font-medium tracking-tight text-white/62 sm:text-[15px]">
+              {lockDate}
             </span>
-            <span className="text-[22px] font-semibold tracking-tight">MacReady Locked</span>
-            <span className="mt-2 text-[13px] text-white/48">Move the pointer to wake the site</span>
+            <span className="h-[112px] w-[min(520px,calc(100vw-48px))] sm:h-[138px]">
+              <LiquidGlass
+                cornerRadius={42}
+                padding="0"
+                aberrationIntensity={1.55}
+                elasticity={0.18}
+                className="rounded-[42px] border border-white/[0.14] bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_32px_90px_rgba(0,0,0,0.48)]"
+              >
+                <span className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),transparent_28%,rgba(255,255,255,0.07)_72%,transparent)]" />
+                <span className="relative z-10 flex h-full items-center justify-center font-semibold tabular-nums tracking-[-0.055em] text-white/92 [text-shadow:0_4px_34px_rgba(255,255,255,0.24)] text-[76px] sm:text-[104px]">
+                  {lockTime}
+                </span>
+              </LiquidGlass>
+            </span>
+            <span className="mt-6 text-[13px] font-medium text-white/42">Move the pointer to wake MacReady</span>
           </span>
         </button>
       )}
