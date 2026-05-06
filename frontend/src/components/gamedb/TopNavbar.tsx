@@ -256,27 +256,39 @@ function formatTime() {
   });
 }
 
-function AppleCalendarPopover({ isOpen }: { isOpen: boolean }) {
+function AppleCalendarPopover({
+  isOpen,
+  onPointerEnter,
+  onPointerLeave,
+}: {
+  isOpen: boolean;
+  onPointerEnter: () => void;
+  onPointerLeave: () => void;
+}) {
   if (!isOpen) return null;
 
   return (
-    <div className="absolute right-3 top-9 z-[65] w-[310px] overflow-hidden rounded-[18px] border border-white/[0.08] bg-black/72 p-3 text-white shadow-[0_24px_70px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
+    <div
+      className="absolute right-3 top-9 z-[65] w-[282px] overflow-hidden rounded-2xl border border-white/[0.08] bg-black/72 p-2.5 text-white shadow-[0_24px_70px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl"
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+    >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.08),transparent_38%),radial-gradient(circle_at_86%_100%,rgba(120,150,210,0.09),transparent_42%)]" />
       <div className="relative z-10">
-        <div className="flex items-end justify-between border-b border-white/[0.08] pb-2">
+        <div className="flex items-end justify-between border-b border-white/[0.08] pb-1.5">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">Apple Calendar</p>
-            <h2 className="mt-1 text-[17px] font-semibold tracking-tight">Upcoming</h2>
+            <p className="text-[9px] uppercase tracking-[0.22em] text-white/38">Apple Calendar</p>
+            <h2 className="mt-0.5 text-[15px] font-semibold tracking-tight">Upcoming</h2>
           </div>
-          <span className="text-[11px] text-white/48">2026</span>
+          <span className="text-[10px] text-white/48">2026</span>
         </div>
-        <div className="mt-2 space-y-1">
+        <div className="mt-1.5 space-y-0.5">
           {APPLE_CALENDAR_ITEMS.map((item) => (
-            <div key={`${item.date}-${item.title}`} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 rounded-xl px-2 py-2.5 hover:bg-white/[0.055]">
-              <span className="text-[11px] font-medium text-white/52">{item.date}</span>
+            <div key={`${item.date}-${item.title}`} className="grid grid-cols-[56px_minmax(0,1fr)] gap-2.5 rounded-xl px-2 py-1.5 hover:bg-white/[0.055]">
+              <span className="text-[10px] font-medium text-white/52">{item.date}</span>
               <span className="min-w-0">
-                <span className="block text-[13px] font-medium leading-tight text-white/88">{item.title}</span>
-                <span className="mt-1 block text-[11px] leading-snug text-white/42">{item.detail}</span>
+                <span className="block text-[12px] font-medium leading-tight text-white/88">{item.title}</span>
+                <span className="mt-0.5 block text-[10px] leading-snug text-white/42">{item.detail}</span>
               </span>
             </div>
           ))}
@@ -314,12 +326,28 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
   const menuRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   // Hover-intent timer — opening delay AND closing delay use the same timer.
   const hoverTimerRef = useRef<number | null>(null);
+  const calendarTimerRef = useRef<number | null>(null);
   const clearHoverTimer = useCallback(() => {
     if (hoverTimerRef.current !== null) {
       window.clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = null;
     }
   }, []);
+
+  const clearCalendarTimer = useCallback(() => {
+    if (calendarTimerRef.current !== null) {
+      window.clearTimeout(calendarTimerRef.current);
+      calendarTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleCalendarClose = useCallback(() => {
+    clearCalendarTimer();
+    calendarTimerRef.current = window.setTimeout(() => {
+      setShowCalendar(false);
+      calendarTimerRef.current = null;
+    }, 160);
+  }, [clearCalendarTimer]);
 
   useEffect(() => {
     const updateTime = () => setCurrentTime(formatTime());
@@ -347,8 +375,11 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
     };
   }, []);
 
-  // Cleanup hover timer on unmount.
-  useEffect(() => () => clearHoverTimer(), [clearHoverTimer]);
+  // Cleanup timers on unmount.
+  useEffect(() => () => {
+    clearHoverTimer();
+    clearCalendarTimer();
+  }, [clearHoverTimer, clearCalendarTimer]);
 
   const setPositionFromElement = useCallback((element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
@@ -604,10 +635,17 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
               )}
               <span className="max-w-[160px] truncate">{user ? user.display_name : "Sign in"}</span>
             </button>
-            <span className="ml-1 inline-flex h-7 select-none items-center px-2 text-[12px] font-medium leading-none text-white/85 font-mono-tabular tracking-[-0.005em]">
+            <span
+              className="ml-1 inline-flex h-7 select-none items-center px-2 text-[12px] font-medium leading-none text-white/85 font-mono-tabular tracking-[-0.005em]"
+              onPointerEnter={clearCalendarTimer}
+              onPointerLeave={scheduleCalendarClose}
+            >
               <button
                 type="button"
-                onClick={() => setShowCalendar((value) => !value)}
+                onClick={() => {
+                  clearCalendarTimer();
+                  setShowCalendar((value) => !value);
+                }}
                 className="rounded-md px-1.5 py-1 text-white/85 transition-colors hover:bg-white/[0.07] hover:text-white"
               >
                 {currentTime}
@@ -617,7 +655,11 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
         </div>
       </div>
 
-      <AppleCalendarPopover isOpen={showCalendar} />
+      <AppleCalendarPopover
+        isOpen={showCalendar}
+        onPointerEnter={clearCalendarTimer}
+        onPointerLeave={scheduleCalendarClose}
+      />
 
       <MenuDropdown
         isOpen={activeMenu === "apple"}
