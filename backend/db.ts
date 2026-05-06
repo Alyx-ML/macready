@@ -33,6 +33,10 @@ export function getDB(projectDir: string): Database {
     crossover_version TEXT,
     gptk_version TEXT,
     launcher TEXT,
+    play_method TEXT,
+    translation_layer TEXT,
+    graphics_preset TEXT,
+    resolution TEXT,
     status TEXT NOT NULL CHECK(status IN (
       'native_arm','rosetta2','crossover_wine','gptk',
       'playable','issues','unsupported',
@@ -110,6 +114,10 @@ export function getDB(projectDir: string): Database {
     "ALTER TABLE games ADD COLUMN cover_art_url TEXT",
     "ALTER TABLE tests ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE SET NULL",
     "ALTER TABLE tests ADD COLUMN gptk_version TEXT",
+    "ALTER TABLE tests ADD COLUMN play_method TEXT",
+    "ALTER TABLE tests ADD COLUMN translation_layer TEXT",
+    "ALTER TABLE tests ADD COLUMN graphics_preset TEXT",
+    "ALTER TABLE tests ADD COLUMN resolution TEXT",
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch { /* column already exists */ }

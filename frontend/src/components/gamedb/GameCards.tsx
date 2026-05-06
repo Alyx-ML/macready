@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getTierConfig } from "./tierConfig";
-import type { Game } from "../../types/gamedb";
+import type { Game, UserHardware } from "../../types/gamedb";
 import { LiquidGlass } from "./LiquidGlass";
 
 export function TierBadge({ tier, size = "sm" }: { tier: string; size?: "sm" | "md" | "lg" }) {
@@ -30,7 +30,40 @@ export function NotRatedBadge({ size = "sm" }: { size?: "sm" | "md" | "lg" }) {
   );
 }
 
-export function GameCard({ game, onClick }: { game: Game; onClick: () => void }) {
+function macEstimateForGame(game: Game, hardware?: UserHardware | null) {
+  const chip = hardware?.chip?.trim();
+  const ownChipReport = chip && game.latest_test?.hardware?.toLowerCase().includes(chip.toLowerCase()) ? game.latest_test : null;
+  if (ownChipReport) {
+    return `${chip}: ${getTierConfig(ownChipReport.status).label}${ownChipReport.fps ? ` · ${ownChipReport.fps} FPS` : ""}`;
+  }
+  if (game.aggregate_tier === "native_arm") {
+    return chip ? `${chip}: Native Mac build` : "Native Mac build";
+  }
+  if (game.benchmark_summary?.total_reports) {
+    const pieces = [
+      hardware?.chip || "Reports",
+      getTierConfig(game.benchmark_summary.best_status || game.aggregate_tier || "unsupported").label,
+      game.benchmark_summary.avg_fps,
+    ].filter(Boolean);
+    return pieces.join(" · ");
+  }
+  return chip ? `${chip}: No Mac reports` : "No Mac reports";
+}
+
+function BenchmarkStrip({ game, hardware }: { game: Game; hardware?: UserHardware | null }) {
+  const reports = game.benchmark_summary?.total_reports || game.test_count || 0;
+  const method = game.benchmark_summary?.method || (game.aggregate_tier === "native_arm" ? "Native" : "");
+
+  return (
+    <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-white/42">
+      <span className="truncate">{macEstimateForGame(game, hardware)}</span>
+      {reports > 0 && <span className="text-white/24">· {reports} report{reports === 1 ? "" : "s"}</span>}
+      {method && <span className="text-white/24">· {method}</span>}
+    </div>
+  );
+}
+
+export function GameCard({ game, onClick, hardware }: { game: Game; onClick: () => void; hardware?: UserHardware | null }) {
   const [imgError, setImgError] = useState(false);
   const tier = game.aggregate_tier || game.latest_test?.status;
   const coverUrl = game.cover_art_url;
@@ -110,6 +143,7 @@ export function GameCard({ game, onClick }: { game: Game; onClick: () => void })
                   </div>
                 )}
               </div>
+              <BenchmarkStrip game={game} hardware={hardware} />
             </div>
           </div>
         </LiquidGlass>

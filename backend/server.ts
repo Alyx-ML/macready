@@ -81,7 +81,6 @@ const MAC_NEWS_FEEDS: MacNewsFeed[] = [
   { source: "AppleInsider", url: "https://appleinsider.com/rss/news" },
   { source: "Apple Newsroom", url: "https://www.apple.com/newsroom/rss-feed.rss" },
   { source: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/apple" },
-  { source: "Six Colors", url: "https://sixcolors.com/feed/" },
   { source: "The Verge", url: "https://www.theverge.com/rss/apple/index.xml" },
   { source: "CodeWeavers", url: "https://www.codeweavers.com/blog/?rss=1", category: "CrossOver" },
   { source: "Apple Developer", url: "https://developer.apple.com/news/releases/rss/releases.rss", category: "Performance", include: /\b(?:macOS\s+26|Tahoe)\b.{0,80}\b(beta|release candidate|RC|release notes|security update|released|available|update)\b/i },
@@ -601,6 +600,39 @@ function computeAggregateTier(tests: any[]): { tier: string; breakdown: Record<s
   return { tier: "unsupported", breakdown };
 }
 
+function buildBenchmarkSummary(gameId: number) {
+  const rows = db.query(`
+    SELECT status, fps, hardware, play_method, translation_layer, graphics_preset, resolution
+    FROM tests
+    WHERE game_id = ?
+    ORDER BY tested_at DESC
+  `).all(gameId) as any[];
+  if (rows.length === 0) return null;
+
+  const aggregate = computeAggregateTier(rows);
+  const methodCounts = new Map<string, number>();
+  const numericFps: number[] = [];
+
+  for (const row of rows) {
+    if (row.play_method) methodCounts.set(row.play_method, (methodCounts.get(row.play_method) || 0) + 1);
+    const fps = String(row.fps || "").match(/\d+(?:\.\d+)?/)?.[0];
+    if (fps) numericFps.push(Number(fps));
+  }
+
+  const method = Array.from(methodCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || rows[0]?.play_method || "";
+  const avgFps = numericFps.length > 0
+    ? `${Math.round(numericFps.reduce((sum, value) => sum + value, 0) / numericFps.length)} FPS`
+    : rows.find((row) => row.fps)?.fps || "";
+
+  return {
+    total_reports: rows.length,
+    best_status: aggregate.tier,
+    method,
+    avg_fps: avgFps,
+    hardware: rows[0]?.hardware || "",
+  };
+}
+
 // ── Auth helpers ────────────────────────────────────────────────────
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -892,6 +924,8 @@ export async function handler(req: Request): Promise<Response> {
     if (status) {
       if (status === "playable") {
         sql += ` AND t.status IN ('native_arm','rosetta2','playable','crossover_wine','gptk','working')`;
+      } else if (status === "native_arm") {
+        sql += ` AND (t.status = 'native_arm' OR g.platform LIKE '%Mac%')`;
       } else {
         sql += ` AND t.status = ?`;
         args.push(status);
@@ -925,6 +959,7 @@ export async function handler(req: Request): Promise<Response> {
           const allTests = db.query(`SELECT status FROM tests WHERE game_id = ?`).all(g.id) as any[];
           g.aggregate_tier = computeAggregateTier(allTests).tier;
         }
+        g.benchmark_summary = buildBenchmarkSummary(g.id);
         // Cover art fallback
         if (!g.cover_art_url && g.steam_app_id) {
           g.cover_art_url = getSteamCoverUrl(g.steam_app_id);
@@ -1015,6 +1050,8 @@ export async function handler(req: Request): Promise<Response> {
         if (row.fps) hwMap[row.hardware].avg_fps = row.fps;
       }
 
+      g.benchmark_summary = buildBenchmarkSummary(g.id);
+
       return json({ 
         game: g, 
         steam: steamMetadata,
@@ -1044,11 +1081,12 @@ export async function handler(req: Request): Promise<Response> {
     const body = await req.json() as any;
     const user = getSessionUser(req);
     try {
-      db.query(`INSERT INTO tests (game_id, user_id, tested_at, macos_version, hardware, wine_version, crossover_version, gptk_version, launcher, status, fps, notes)
-                VALUES (?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      db.query(`INSERT INTO tests (game_id, user_id, tested_at, macos_version, hardware, wine_version, crossover_version, gptk_version, launcher, play_method, translation_layer, graphics_preset, resolution, status, fps, notes)
+                VALUES (?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
         gameId, user?.id || null, body.tested_at || null, body.macos_version || null, body.hardware || null,
         body.wine_version || null, body.crossover_version || null, body.gptk_version || null,
-        body.launcher || null, body.status, body.fps || null, body.notes || null
+        body.launcher || null, body.play_method || null, body.translation_layer || null, body.graphics_preset || null,
+        body.resolution || null, body.status, body.fps || null, body.notes || null
       );
       const t = db.query(`SELECT * FROM tests WHERE id = last_insert_rowid()`).get() as any;
       if (body.issues?.length) {

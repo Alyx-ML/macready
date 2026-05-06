@@ -88,6 +88,11 @@ function steamItemToGame(item: SteamCatalogItem, index: number): Game {
     cover_art_url: item.cover_art_url,
     created_at: "2026-05-05T00:00:00.000Z",
     aggregate_tier: item.compatibility_tier as Game["aggregate_tier"],
+    benchmark_summary: item.mac_native ? {
+      total_reports: 0,
+      best_status: "native_arm",
+      method: "Native",
+    } : undefined,
   };
 }
 

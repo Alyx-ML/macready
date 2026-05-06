@@ -1,7 +1,7 @@
 import { forwardRef, useState, useCallback, useMemo, useRef, useEffect, type Dispatch, type HTMLAttributes, type SetStateAction } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Game, MacNewsCategory, MacNewsItem } from "../types/gamedb";
+import type { Game, MacNewsCategory, MacNewsItem, UserHardware } from "../types/gamedb";
 import { listGames, getDistinctValues, createGame, getMe, getMacNews, getAppStoreDetails, getSteamTrending, searchSteamCatalog, searchAppStore, isStaticDataMode, type SteamCatalogItem } from "../api/gamedb";
 import { FloatingAgentChat } from "./FloatingAgentChat";
 import { LoadingCards, GameCard, TierBadge } from "./gamedb/GameCards";
@@ -355,6 +355,7 @@ export function GameDB() {
   const [steamResults, setSteamResults] = useState<SteamCatalogItem[]>([]);
   const [steamLoading, setSteamLoading] = useState(false);
   const [addingSteamId, setAddingSteamId] = useState<string | null>(null);
+  const [primaryHardware, setPrimaryHardware] = useState<UserHardware | null>(null);
   const [compatibilityVisibleSteamCount, setCompatibilityVisibleSteamCount] = useState(() => readSessionNumber(COMPATIBILITY_VISIBLE_COUNT_KEY, 16));
   const compatibilityScrollTopRef = useRef(readSessionNumber(COMPATIBILITY_SCROLL_TOP_KEY, 0));
   const compatibilityScrollSaveTimer = useRef<number | null>(null);
@@ -418,7 +419,10 @@ export function GameDB() {
   useEffect(() => {
     if (isStaticDataMode) return;
     getMe().then((data: any) => {
-      if (data) setUser(data.user);
+      if (data) {
+        setUser(data.user);
+        setPrimaryHardware(data.hardware?.find((item: UserHardware) => item.is_primary) || data.hardware?.[0] || null);
+      }
     });
   }, []);
 
@@ -557,7 +561,7 @@ export function GameDB() {
                 }}
               />
             ) : detailId !== null ? (
-              <GameDetailView gameId={detailId} onBack={() => runPageCrossfade(() => setDetailId(null))} onAddTest={() => qc.invalidateQueries({ queryKey: ["gamedb", "game", detailId] })} />
+              <GameDetailView gameId={detailId} primaryHardware={primaryHardware} onBack={() => runPageCrossfade(() => setDetailId(null))} onAddTest={() => qc.invalidateQueries({ queryKey: ["gamedb", "game", detailId] })} />
             ) : mainView === "home" ? (
               <HomeEditorialPage
                 newsItems={macNews ?? []}
@@ -596,6 +600,7 @@ export function GameDB() {
                 setVisibleSteamCount={setCompatibilityVisibleSteamCount}
                 initialSteamScrollTop={compatibilityScrollTopRef.current}
                 onSteamScrollTopChange={rememberCompatibilityScrollTop}
+                primaryHardware={primaryHardware}
               />
             )}
       </div>
@@ -687,7 +692,8 @@ function GameListView({
   distinctWine,
   wineFilter, setWineFilter, macosFilter, setMacosFilter, hwFilter, setHwFilter,
   onOpenDetail, steamResults, steamLoading, addingSteamId, onAddSteamGame, trendingSteam, isTrendingSteamLoading,
-  visibleSteamCount, setVisibleSteamCount, initialSteamScrollTop, onSteamScrollTopChange
+  visibleSteamCount, setVisibleSteamCount, initialSteamScrollTop, onSteamScrollTopChange,
+  primaryHardware
 }: {
   games: Game[]; isLoading: boolean; search: string; setSearch: (s: string) => void;
   statusFilter: string; setStatusFilter: (s: string) => void;
@@ -703,6 +709,7 @@ function GameListView({
   setVisibleSteamCount: Dispatch<SetStateAction<number>>;
   initialSteamScrollTop: number;
   onSteamScrollTopChange: (scrollTop: number) => void;
+  primaryHardware?: UserHardware | null;
 }) {
   const [hoveredFilter, setHoveredFilter] = useState<string | null>(null);
   const [openFilterMenu, setOpenFilterMenu] = useState<string | null>(null);
@@ -776,7 +783,8 @@ function GameListView({
           isLocal: true,
           id: localGame.id,
           aggregate_tier: localGame.aggregate_tier,
-          latest_test: localGame.latest_test
+          latest_test: localGame.latest_test,
+          benchmark_summary: localGame.benchmark_summary,
         };
       }
       return { ...steamGame, isLocal: false };
@@ -853,6 +861,12 @@ function GameListView({
   const newReleaseGames = exploreGames.filter((game) => game.feed === "new_releases");
   const visibleTopSellerGames = topSellerGames.slice(0, Math.ceil(visibleSteamCount * 0.6));
   const visibleNewReleaseGames = newReleaseGames.slice(0, Math.max(0, visibleSteamCount - visibleTopSellerGames.length));
+  const filteredSteamCatalog = useMemo(() => {
+    if (!statusFilter) return [];
+    return steamGamesWithLocalData
+      .filter((steamGame) => statusFilter === "native_arm" ? steamGame.mac_native : steamGame.compatibility_tier === statusFilter)
+      .slice(0, 20);
+  }, [statusFilter, steamGamesWithLocalData]);
 
   return (
     <div className="animate-in">
@@ -996,6 +1010,7 @@ function GameListView({
                         addingSteamId={addingSteamId}
                         onSelect={onAddSteamGame}
                         onOpenDetail={onOpenDetail}
+                        hardware={primaryHardware}
                       />
                     </section>
                   )}
@@ -1007,6 +1022,7 @@ function GameListView({
                         addingSteamId={addingSteamId}
                         onSelect={onAddSteamGame}
                         onOpenDetail={onOpenDetail}
+                        hardware={primaryHardware}
                       />
                     </section>
                   )}
@@ -1031,7 +1047,7 @@ function GameListView({
               <CardSilkField>
                 <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filtered.map((g) => (
-                    <GameCard key={g.id} game={g} onClick={() => onOpenDetail(g.id)} />
+                    <GameCard key={g.id} game={g} hardware={primaryHardware} onClick={() => onOpenDetail(g.id)} />
                   ))}
                 </div>
               </CardSilkField>
@@ -1047,6 +1063,24 @@ function GameListView({
                   addingSteamId={addingSteamId}
                   onSelect={onAddSteamGame}
                   onOpenDetail={onOpenDetail}
+                  hardware={primaryHardware}
+                />
+              </SearchResultsPanel>
+            </div>
+          )}
+
+          {search === "" && filteredSteamCatalog.length > 0 && (
+            <div>
+              <h3 className="text-[15px] font-semibold text-white tracking-tight mb-4 px-1">
+                {statusFilter === "native_arm" ? "Steam Native Mac" : getTierConfig(statusFilter).label}
+              </h3>
+              <SearchResultsPanel>
+                <SteamGameGrid
+                  games={filteredSteamCatalog}
+                  addingSteamId={addingSteamId}
+                  onSelect={onAddSteamGame}
+                  onOpenDetail={onOpenDetail}
+                  hardware={primaryHardware}
                 />
               </SearchResultsPanel>
             </div>
@@ -2741,7 +2775,21 @@ function HeroCarousel({ games, addingSteamId, onSelect, onOpenDetail }: { games:
 }
 
 // ── Steam Grid Component ────────────────────────────────────
-function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail }: { games: any[]; addingSteamId: string | null; onSelect: (g: any) => void; onOpenDetail: (id: number) => void }) {
+function steamCardEstimate(game: any, hardware?: UserHardware | null) {
+  const chip = hardware?.chip?.trim();
+  if (game.latest_test && chip && game.latest_test.hardware?.toLowerCase().includes(chip.toLowerCase())) {
+    return `${chip}: ${getTierConfig(game.latest_test.status).label}${game.latest_test.fps ? ` · ${game.latest_test.fps} FPS` : ""}`;
+  }
+  if (game.mac_native || game.compatibility_tier === "native_arm") {
+    return chip ? `${chip}: Native Mac build` : "Native Mac build";
+  }
+  if (game.latest_test) {
+    return [chip || "Reports", getTierConfig(game.latest_test.status).label, game.latest_test.fps ? `${game.latest_test.fps} FPS` : ""].filter(Boolean).join(" · ");
+  }
+  return chip ? `${chip}: No Mac reports` : "No Mac reports";
+}
+
+function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail, hardware }: { games: any[]; addingSteamId: string | null; onSelect: (g: any) => void; onOpenDetail: (id: number) => void; hardware?: UserHardware | null }) {
   if (games.length === 0) return null;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -2780,13 +2828,16 @@ function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail }: { games
               
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300 z-10" />
               
-              <div className="absolute bottom-0 left-0 right-0 p-3 flex items-end justify-between z-10">
-                <h3 className="text-[13px] font-medium text-white truncate drop-shadow-md pr-2">{r.name}</h3>
-                {isLocal && tier && (
-                  <div className="flex-none scale-90 origin-bottom-right">
-                    <TierBadge tier={tier} size="sm" />
-                  </div>
-                )}
+              <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+                <div className="flex items-end justify-between gap-2">
+                  <h3 className="min-w-0 truncate pr-2 text-[13px] font-medium text-white drop-shadow-md">{r.name}</h3>
+                  {isLocal && tier && (
+                    <div className="flex-none scale-90 origin-bottom-right">
+                      <TierBadge tier={tier} size="sm" />
+                    </div>
+                  )}
+                </div>
+                <p className="mt-1 truncate text-[10px] text-white/42">{steamCardEstimate(r, hardware)}</p>
               </div>
             </div>
           </EdgeLightWrapper>

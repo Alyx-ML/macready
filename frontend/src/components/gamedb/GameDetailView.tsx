@@ -6,9 +6,9 @@ import { getGame, addTest, getSteamReviews } from "../../api/gamedb";
 import { NotRatedBadge, TierBadge } from "./GameCards";
 import { getTierConfig, NEW_TIERS } from "./tierConfig";
 import { cn } from "../../lib/utils";
-import type { Test, Issue, CompatTier, AddTestRequest, AggregateRating, SteamMetadata } from "../../types/gamedb";
+import type { Test, Issue, CompatTier, AddTestRequest, AggregateRating, SteamMetadata, UserHardware } from "../../types/gamedb";
 
-export function GameDetailView({ gameId, onBack, onAddTest }: { gameId: number; onBack: () => void; onAddTest: () => void }) {
+export function GameDetailView({ gameId, onBack, onAddTest, primaryHardware }: { gameId: number; onBack: () => void; onAddTest: () => void; primaryHardware?: UserHardware | null }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["gamedb", "game", gameId],
@@ -206,11 +206,15 @@ export function GameDetailView({ gameId, onBack, onAddTest }: { gameId: number; 
         </section>
       )}
 
-      <section className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-white/6 pb-5 sm:grid-cols-4">
-        {compatibilityStats.map((stat) => (
-          <DetailFact key={stat.label} label={stat.label} value={stat.value} />
-        ))}
-      </section>
+      <MyMacEstimate hardware={primaryHardware} tests={tests} aggregate={aggregate} steam={steam} />
+
+      <DetailBenchmarkSummary
+        hardware={primaryHardware}
+        tests={tests}
+        aggregate={aggregate}
+        steam={steam}
+        reportCount={compatibilityStats[0].value}
+      />
 
       {aggregate && aggregate.total_reports > 0 && (
         <section className="border-b border-white/6 pb-5">
@@ -276,7 +280,12 @@ export function GameDetailView({ gameId, onBack, onAddTest }: { gameId: number; 
         </div>
       )}
 
-      {tests.length === 0 && <p className="text-[13px] text-white/20 py-8 text-center">No tests recorded yet.</p>}
+      {tests.length === 0 && (
+        <div className="py-8 text-center">
+          <p className="text-[13px] text-white/24">No test reports recorded yet.</p>
+          <p className="mt-2 text-[12px] text-white/16">Submitted reports will show method, chip, RAM, preset, resolution, FPS, and notes here.</p>
+        </div>
+      )}
       <div className="space-y-2">
         {tests.map((t) => (
           <TestCard key={t.id} test={t} />
@@ -700,6 +709,74 @@ function CompactSignal({ Icon, label, value, muted }: { Icon: LucideIcon; label:
   );
 }
 
+function MyMacEstimate({ hardware, tests, aggregate, steam }: { hardware?: UserHardware | null; tests: Test[]; aggregate: AggregateRating; steam?: SteamMetadata | null }) {
+  const chip = hardware?.chip || hardware?.mac_model || "No hardware profile selected";
+  const chipKey = hardware?.chip?.toLowerCase() || "";
+  const matchingReports = chipKey ? tests.filter((test) => test.hardware?.toLowerCase().includes(chipKey)) : [];
+  const bestReport = matchingReports[0];
+  const title = !hardware
+    ? "Add Machine+"
+    : bestReport
+      ? getTierConfig(bestReport.status).label
+      : steam?.mac_native
+        ? "Native"
+        : aggregate.total_reports > 0
+          ? getTierConfig(aggregate.tier).label
+          : "Needs reports";
+  const detail = !hardware
+    ? "Add a hardware profile in Account to estimate this game against your Mac."
+    : bestReport
+      ? [bestReport.play_method, bestReport.fps ? `${bestReport.fps}${/\bfps\b/i.test(bestReport.fps) ? "" : " FPS"}` : "", bestReport.graphics_preset, bestReport.resolution].filter(Boolean).join(" · ")
+      : steam?.mac_native
+        ? "Steam lists a native Mac build."
+        : aggregate.total_reports > 0
+          ? `${aggregate.total_reports} real-world report${aggregate.total_reports === 1 ? "" : "s"} available.`
+          : "No real-world report for this Mac yet.";
+
+  return (
+    <section className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/6 pb-5">
+      <div className="min-w-0">
+        <SectionKicker>My Mac Estimate</SectionKicker>
+        <p className="truncate text-[14px] text-white/78">{chip}{hardware?.ram_gb ? ` · ${hardware.ram_gb} GB` : ""}</p>
+        <p className="mt-1 truncate text-[12px] text-white/42">{detail}</p>
+      </div>
+      <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1 text-[12px] font-medium text-white/72">{title}</span>
+    </section>
+  );
+}
+
+function DetailBenchmarkSummary({
+  hardware,
+  tests,
+  aggregate,
+  steam,
+  reportCount,
+}: {
+  hardware?: UserHardware | null;
+  tests: Test[];
+  aggregate: AggregateRating;
+  steam?: SteamMetadata | null;
+  reportCount: string;
+}) {
+  const latest = tests[0];
+  const bestStatus = latest?.status || (aggregate.total_reports > 0 ? aggregate.tier : steam?.mac_native ? "native_arm" : "");
+  const method = latest?.play_method || (steam?.mac_native ? "Native" : "—");
+  const fps = latest?.fps ? `${latest.fps}${/\bfps\b/i.test(latest.fps) ? "" : " FPS"}` : "—";
+  const setup = [latest?.translation_layer, latest?.graphics_preset, latest?.resolution].filter(Boolean).join(" · ") || "—";
+  const profile = hardware ? [hardware.chip || hardware.mac_model, hardware.ram_gb ? `${hardware.ram_gb} GB` : ""].filter(Boolean).join(" · ") : "—";
+
+  return (
+    <section className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-white/6 pb-5 sm:grid-cols-3 lg:grid-cols-6">
+      <DetailFact label="Reports" value={reportCount} />
+      <DetailFact label="Rating" value={bestStatus ? getTierConfig(bestStatus).label : "Not Rated"} />
+      <DetailFact label="Method" value={method} />
+      <DetailFact label="FPS" value={fps} />
+      <DetailFact label="Setup" value={setup} />
+      <DetailFact label="My Mac" value={profile} />
+    </section>
+  );
+}
+
 function RequirementBox({ title, minimum, recommended }: { title: string; minimum?: string; recommended?: string }) {
   const renderLines = (value: string) => value
     .split("\n")
@@ -748,6 +825,7 @@ function RequirementBox({ title, minimum, recommended }: { title: string; minimu
 
 function TestCard({ test }: { test: Test }) {
   const [expanded, setExpanded] = useState(false);
+  const fpsLabel = test.fps ? (/\bfps\b/i.test(test.fps) ? test.fps : `${test.fps} FPS`) : "";
   return (
     <div className="border border-[#2a2a2a] rounded-lg bg-[#0d0d0d] overflow-hidden">
       <div className="px-3 py-2.5 flex items-center justify-between cursor-pointer hover:bg-[#111] transition-colors" onClick={() => setExpanded(!expanded)}>
@@ -755,9 +833,10 @@ function TestCard({ test }: { test: Test }) {
           <TierBadge tier={test.status} size="sm" />
           {test.user_display_name && <span className="text-[11px] text-white/30">{test.user_display_name}</span>}
           <span className="text-[11px] text-white/20">{new Date(test.tested_at).toLocaleDateString()}</span>
+          {test.play_method && <span className="text-[11px] text-white/40">{test.play_method}</span>}
           <span className="text-[11px] font-mono text-white/20">{test.hardware || "—"}</span>
           <span className="text-[11px] text-white/20">{test.macos_version || "—"}</span>
-          {test.fps && <span className="text-[11px] font-mono text-white/30">{test.fps} fps</span>}
+          {fpsLabel && <span className="text-[11px] font-mono text-white/30">{fpsLabel}</span>}
         </div>
         <span className="text-[10px] text-white/20 ml-2">{expanded ? "▲" : "▼"}</span>
       </div>
@@ -768,6 +847,9 @@ function TestCard({ test }: { test: Test }) {
             {test.wine_version && <span>Wine: {test.wine_version}</span>}
             {test.crossover_version && <span>CrossOver: {test.crossover_version}</span>}
             {test.gptk_version && <span>GPTK: {test.gptk_version}</span>}
+            {test.translation_layer && test.translation_layer !== "None" && <span>{test.translation_layer}</span>}
+            {test.graphics_preset && <span>Preset: {test.graphics_preset}</span>}
+            {test.resolution && <span>Resolution: {test.resolution}</span>}
             {test.launcher && <span>Launcher: {test.launcher}</span>}
           </div>
           {test.issues && test.issues.length > 0 && (
@@ -799,12 +881,17 @@ function IssueRow({ issue }: { issue: Issue }) {
 
 function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) {
   const [status, setStatus] = useState<CompatTier>("playable");
+  const [playMethod, setPlayMethod] = useState<AddTestRequest["play_method"]>("CrossOver");
+  const [translationLayer, setTranslationLayer] = useState<AddTestRequest["translation_layer"]>("D3DMetal");
   const [macos, setMacos] = useState("");
   const [hardware, setHardware] = useState("");
+  const [ram, setRam] = useState("");
   const [wine, setWine] = useState("");
   const [crossover, setCrossover] = useState("");
   const [gptkVer, setGptkVer] = useState("");
   const [launcher, setLauncher] = useState("");
+  const [preset, setPreset] = useState("");
+  const [resolution, setResolution] = useState("");
   const [fps, setFps] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -813,7 +900,23 @@ function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) 
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div>
+          <label className={labelCls}>Run Method</label>
+          <select value={playMethod} onChange={(e) => setPlayMethod(e.target.value as AddTestRequest["play_method"])} className={inputCls}>
+            {["Native", "CrossOver", "Parallels", "GPTK"].map((method) => (
+              <option key={method} value={method}>{method}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>D3D Layer</label>
+          <select value={translationLayer} onChange={(e) => setTranslationLayer(e.target.value as AddTestRequest["translation_layer"])} className={inputCls}>
+            {["D3DMetal", "DXVK", "None"].map((layer) => (
+              <option key={layer} value={layer}>{layer}</option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className={labelCls}>Compatibility Tier</label>
           <select value={status} onChange={(e) => setStatus(e.target.value as CompatTier)} className={inputCls}>
@@ -824,7 +927,7 @@ function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) 
         </div>
         <div>
           <label className={labelCls}>FPS</label>
-          <input value={fps} onChange={(e) => setFps(e.target.value)} placeholder="e.g. 60 @ 1440p" className={inputCls} />
+          <input value={fps} onChange={(e) => setFps(e.target.value)} placeholder="e.g. 60" className={inputCls} />
         </div>
         <div>
           <label className={labelCls}>macOS Version</label>
@@ -836,11 +939,20 @@ function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) 
           </select>
         </div>
         <div>
-          <label className={labelCls}>Hardware</label>
+          <label className={labelCls}>Chip</label>
           <select value={hardware} onChange={(e) => setHardware(e.target.value)} className={inputCls}>
             <option value="">Select</option>
             {["M1","M1 Pro","M1 Max","M1 Ultra","M2","M2 Pro","M2 Max","M2 Ultra","M3","M3 Pro","M3 Max","M4","M4 Pro","M4 Max","M5","M5 Pro","M5 Max"].map(h => (
               <option key={h} value={h}>{h}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>RAM</label>
+          <select value={ram} onChange={(e) => setRam(e.target.value)} className={inputCls}>
+            <option value="">Select</option>
+            {["8 GB","16 GB","18 GB","24 GB","32 GB","36 GB","48 GB","64 GB","96 GB","128 GB","192 GB"].map(value => (
+              <option key={value} value={value}>{value}</option>
             ))}
           </select>
         </div>
@@ -860,6 +972,19 @@ function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) 
           <label className={labelCls}>Launcher</label>
           <input value={launcher} onChange={(e) => setLauncher(e.target.value)} placeholder="e.g. Steam, Heroic" className={inputCls} />
         </div>
+        <div>
+          <label className={labelCls}>Graphics Preset</label>
+          <select value={preset} onChange={(e) => setPreset(e.target.value)} className={inputCls}>
+            <option value="">Select</option>
+            {["Low","Medium","High","Ultra","Custom"].map(value => (
+              <option key={value} value={value}>{value}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>Resolution</label>
+          <input value={resolution} onChange={(e) => setResolution(e.target.value)} placeholder="e.g. 1920x1080" className={inputCls} />
+        </div>
       </div>
       <div>
         <label className={labelCls}>Notes</label>
@@ -867,9 +992,11 @@ function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) 
       </div>
       <button
         onClick={() => onSubmit({
-          status, macos_version: macos || undefined, hardware: hardware || undefined,
+          status, play_method: playMethod, translation_layer: translationLayer,
+          macos_version: macos || undefined, hardware: [hardware, ram].filter(Boolean).join(" ") || undefined,
           wine_version: wine || undefined, crossover_version: crossover || undefined,
           gptk_version: gptkVer || undefined, launcher: launcher || undefined,
+          graphics_preset: preset || undefined, resolution: resolution || undefined,
           fps: fps || undefined, notes: notes || undefined,
         })}
         className="w-full mt-4 px-4 py-2.5 text-[13px] font-medium rounded-lg bg-white text-black hover:bg-white/90 transition-all"

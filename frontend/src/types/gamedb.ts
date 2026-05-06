@@ -25,6 +25,15 @@ export interface Game {
   latest_test?: Test;
   test_count?: number;
   aggregate_tier?: CompatTier;
+  benchmark_summary?: BenchmarkSummary;
+}
+
+export interface BenchmarkSummary {
+  total_reports: number;
+  best_status?: CompatTier;
+  method?: string;
+  avg_fps?: string;
+  hardware?: string;
 }
 
 export interface SteamMetadata {
@@ -167,6 +176,10 @@ export interface Test {
   crossover_version?: string;
   gptk_version?: string;
   launcher?: string;
+  play_method?: "Native" | "CrossOver" | "Parallels" | "GPTK";
+  translation_layer?: "D3DMetal" | "DXVK" | "None";
+  graphics_preset?: string;
+  resolution?: string;
   status: CompatTier;
   fps?: string;
   notes?: string;
@@ -243,6 +256,10 @@ export interface AddTestRequest {
   crossover_version?: string;
   gptk_version?: string;
   launcher?: string;
+  play_method?: "Native" | "CrossOver" | "Parallels" | "GPTK";
+  translation_layer?: "D3DMetal" | "DXVK" | "None";
+  graphics_preset?: string;
+  resolution?: string;
   status: CompatTier;
   fps?: string;
   notes?: string;
