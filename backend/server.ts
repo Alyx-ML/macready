@@ -53,7 +53,6 @@ const MAC_NEWS_FEEDS: MacNewsFeed[] = [
   { source: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/apple" },
   { source: "Six Colors", url: "https://sixcolors.com/feed/" },
   { source: "The Verge", url: "https://www.theverge.com/rss/apple/index.xml" },
-  { source: "TidBITS", url: "https://tidbits.com/feed/" },
   { source: "CodeWeavers", url: "https://www.codeweavers.com/blog/?rss=1", category: "CrossOver" },
   { source: "Apple Developer", url: "https://developer.apple.com/news/releases/rss/releases.rss", category: "Performance", include: /\b(?:macOS\s+26|Tahoe)\b.{0,80}\b(beta|release candidate|RC|release notes|security update|released|available|update)\b/i },
 ];
