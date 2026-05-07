@@ -1321,7 +1321,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                       {leadArticle.title}
                     </h2>
                     {leadArticle.summary && (
-                      <p className="mt-4 line-clamp-3 max-w-[66ch] text-[15px] leading-7 text-white/58">{leadArticle.summary}</p>
+                      <p className="mt-4 line-clamp-3 max-w-[66ch] text-[15px] leading-7 text-white/70">{leadArticle.summary}</p>
                     )}
                     <span className="mt-4 inline-flex h-7 w-fit items-center rounded-full bg-white/[0.055] px-3.5 text-[12px] font-medium text-white/62 ring-1 ring-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.055)] transition-colors group-hover:bg-white/[0.09] group-hover:text-white/86">
                       Read more
@@ -1354,9 +1354,9 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                         />
                       )}
                       <div className="min-w-0">
-                        <p className="text-[9px] uppercase tracking-[0.2em] text-white/50">{article.source}</p>
-                        <h3 className="mt-1 line-clamp-2 text-[15px] font-medium leading-snug text-white/82 group-hover:text-white">{article.category === "App Store" ? getAppStoreName(article) : article.title}</h3>
-                        {article.summary && <p className="mt-1 line-clamp-1 text-[12px] leading-5 text-white/58">{article.summary}</p>}
+                        <p className="text-[9px] uppercase tracking-[0.2em] text-white/58">{article.source}</p>
+                        <h3 className="mt-1 line-clamp-2 text-[15px] font-medium leading-snug text-white/90 group-hover:text-white">{article.category === "App Store" ? getAppStoreName(article) : article.title}</h3>
+                        {article.summary && <p className="mt-1 line-clamp-1 text-[12px] leading-5 text-white/66">{article.summary}</p>}
                         <span className="mt-2 inline-flex h-6 items-center rounded-full bg-white/[0.045] px-2.5 text-[11px] font-medium text-white/60 ring-1 ring-white/[0.045] transition-colors group-hover:bg-white/[0.08] group-hover:text-white/76">
                           Read more
                         </span>
@@ -1403,11 +1403,11 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                             />
                           )}
                           <div className="min-w-0 pt-4">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-white/26">
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-white/38">
                               {article.source} {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
                             </p>
-                            <h3 className="mt-2 line-clamp-2 text-[21px] font-semibold leading-tight text-white/88 group-hover:text-white">{article.title}</h3>
-                            {article.summary && <p className="mt-3 line-clamp-2 text-[13px] leading-6 text-white/52">{article.summary}</p>}
+                            <h3 className="mt-2 line-clamp-2 text-[21px] font-semibold leading-tight text-white/94 group-hover:text-white">{article.title}</h3>
+                            {article.summary && <p className="mt-3 line-clamp-2 text-[13px] leading-6 text-white/64">{article.summary}</p>}
                           </div>
                         </button>
                       ))}
@@ -1439,10 +1439,10 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                               ) : null}
                             </span>
                             <span className="min-w-0">
-                              <span className="block text-[9px] uppercase tracking-[0.2em] text-white/24">
+                              <span className="block text-[9px] uppercase tracking-[0.2em] text-white/36">
                                 {NEWS_CATEGORY_LABELS[article.category]} · {article.source}
                               </span>
-                              <span className="mt-1 block text-[14px] leading-snug text-white/72 transition-colors group-hover:text-white">
+                              <span className="mt-1 block text-[14px] leading-snug text-white/82 transition-colors group-hover:text-white">
                                 {article.category === "App Store" ? getAppStoreName(article) : article.title}
                               </span>
                             </span>
@@ -1532,14 +1532,14 @@ function MacOSUpdatesFeed({
                   className="mb-3 aspect-[16/9] w-full rounded-[12px] object-cover opacity-[0.76] transition-opacity duration-300 group-hover:opacity-100"
                 />
               )}
-              <p className="text-[9px] uppercase tracking-[0.2em] text-white/42">
+              <p className="text-[9px] uppercase tracking-[0.2em] text-white/52">
                 {article.source} {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
               </p>
-              <h3 className="mt-1.5 text-[16px] font-medium leading-snug text-white/78 transition-colors group-hover:text-white">
+              <h3 className="mt-1.5 text-[16px] font-medium leading-snug text-white/88 transition-colors group-hover:text-white">
                 {article.title}
               </h3>
               {article.summary && (
-                <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-white/46">
+                <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-white/60">
                   {article.summary}
                 </p>
               )}
@@ -1591,14 +1591,14 @@ function CrossoverUpdatesFeed({
                   className="aspect-[16/10] h-full min-h-[92px] w-full rounded-[12px] object-cover opacity-[0.76] transition-opacity duration-300 group-hover:opacity-100 xl:mb-3 xl:h-auto xl:min-h-0"
                 />
                 <span className="min-w-0">
-                  <span className="block text-[9px] uppercase tracking-[0.2em] text-white/42">
+                  <span className="block text-[9px] uppercase tracking-[0.2em] text-white/52">
                     CodeWeavers {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
                   </span>
-                  <span className="mt-1.5 line-clamp-2 block text-[16px] font-medium leading-snug text-white/78 transition-colors group-hover:text-white">
+                  <span className="mt-1.5 line-clamp-2 block text-[16px] font-medium leading-snug text-white/88 transition-colors group-hover:text-white">
                     {article.title}
                   </span>
                   {article.summary && (
-                    <span className="mt-2 line-clamp-2 block text-[12px] leading-5 text-white/46">
+                    <span className="mt-2 line-clamp-2 block text-[12px] leading-5 text-white/60">
                       {article.summary}
                     </span>
                   )}
@@ -1620,10 +1620,10 @@ function CrossoverUpdatesFeed({
                 onClick={() => onOpenArticle(article)}
                 className="group rounded-[14px] bg-white/[0.025] px-4 py-3 text-left ring-1 ring-white/[0.045] transition-colors hover:bg-white/[0.045]"
               >
-                <p className="text-[9px] uppercase tracking-[0.2em] text-white/34">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-white/46">
                   {formatDate(article.published_at)}
                 </p>
-                <h3 className="mt-1 text-[14px] font-medium leading-snug text-white/72 transition-colors group-hover:text-white">
+                <h3 className="mt-1 text-[14px] font-medium leading-snug text-white/82 transition-colors group-hover:text-white">
                   {article.title}
                 </h3>
               </button>
@@ -1852,7 +1852,7 @@ function ArticleReader({
           />
         )}
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-white/44">
             {categoryLabel} · {article.source} {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
           </p>
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.04] tracking-tight text-white md:text-[48px]">
@@ -1891,8 +1891,8 @@ function ArticleBodyScroll({ paragraphs, compact = false }: { paragraphs: string
             <p
               key={`${paragraph.slice(0, 28)}-${index}`}
               className={compact
-                ? "relative pl-5 text-[15px] leading-7 text-white/62 before:absolute before:left-0 before:top-[0.72em] before:size-1.5 before:rounded-full before:bg-white/70"
-                : "text-[16px] leading-8 text-white/62"}
+                ? "relative pl-5 text-[15px] leading-7 text-white/76 before:absolute before:left-0 before:top-[0.72em] before:size-1.5 before:rounded-full before:bg-white/78"
+                : "text-[16px] leading-8 text-white/76"}
             >
               {paragraph}
             </p>
@@ -1935,7 +1935,7 @@ function CrossoverBlogArticleReader({
           className="aspect-[16/10] w-full rounded-[22px] object-cover opacity-[0.86] md:sticky md:top-16"
         />
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-white/44">
             CrossOver · CodeWeavers {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
           </p>
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.04] tracking-tight text-white md:text-[48px]">
@@ -1973,25 +1973,25 @@ function MacOSReleaseNotesPanel({
 
       <div className="relative grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="px-7 py-8 md:px-9 lg:sticky lg:top-14 lg:h-[calc(100vh-92px)] lg:py-10">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-white/36">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-white/48">
             MacOS Updates · Apple Developer {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
           </p>
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.02] tracking-tight text-white md:text-[46px]">
             {article.title}
           </h1>
           {article.summary && (
-            <p className="mt-5 text-[15px] leading-7 text-white/52">
+            <p className="mt-5 text-[15px] leading-7 text-white/68">
               {article.summary}
             </p>
           )}
           <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
             <div>
-              <dt className="text-white/34">System</dt>
-              <dd className="mt-1 font-medium text-white/78">{osName}</dd>
+              <dt className="text-white/48">System</dt>
+              <dd className="mt-1 font-medium text-white/86">{osName}</dd>
             </div>
             <div>
-              <dt className="text-white/34">Version</dt>
-              <dd className="mt-1 font-medium text-white/78">{version}</dd>
+              <dt className="text-white/48">Version</dt>
+              <dd className="mt-1 font-medium text-white/86">{version}</dd>
             </div>
           </dl>
           <a
@@ -2097,23 +2097,23 @@ function CrossoverChangelogPanel({
 
       <div className="relative grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="px-7 py-8 md:px-9 lg:py-10">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-white/36">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-white/48">
             Crossover · CodeWeavers Changelog {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
           </p>
           <h1 className="mt-4 text-[34px] font-semibold leading-[1.02] tracking-tight text-white md:text-[46px]">
             {article.title}
           </h1>
-          <p className="mt-5 text-[15px] leading-7 text-white/52">
+          <p className="mt-5 text-[15px] leading-7 text-white/68">
             CrossOver lets Mac users run Windows games and apps without installing Windows, using CodeWeavers' Wine-based compatibility layer tuned for macOS.
           </p>
           <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 text-[12px]">
             <div>
-              <dt className="text-white/34">Details</dt>
-              <dd className="mt-1 font-medium text-white/78">{product}</dd>
+              <dt className="text-white/48">Details</dt>
+              <dd className="mt-1 font-medium text-white/86">{product}</dd>
             </div>
             <div>
-              <dt className="text-white/34">Version</dt>
-              <dd className="mt-1 font-medium text-white/78">{version}</dd>
+              <dt className="text-white/48">Version</dt>
+              <dd className="mt-1 font-medium text-white/86">{version}</dd>
             </div>
           </dl>
           <a
@@ -2148,20 +2148,20 @@ function CrossoverChangelogPanel({
                     {section.items.map((item, itemIndex) => {
                       if (item.kind === "heading") {
                         return (
-                          <h3 key={`${item.text}-${itemIndex}`} className="pt-3 text-[14px] font-semibold uppercase tracking-[0.16em] text-white/46">
+                          <h3 key={`${item.text}-${itemIndex}`} className="pt-3 text-[14px] font-semibold uppercase tracking-[0.16em] text-white/60">
                             {item.text}
                           </h3>
                         );
                       }
                       if (item.kind === "listItem") {
                         return (
-                          <p key={`${item.text}-${itemIndex}`} className="relative pl-5 text-[15px] leading-7 text-white/62 before:absolute before:left-0 before:top-[0.72em] before:size-1.5 before:rounded-full before:bg-white/34">
+                          <p key={`${item.text}-${itemIndex}`} className="relative pl-5 text-[15px] leading-7 text-white/76 before:absolute before:left-0 before:top-[0.72em] before:size-1.5 before:rounded-full before:bg-white/62">
                             {item.text}
                           </p>
                         );
                       }
                       return (
-                        <p key={`${item.text}-${itemIndex}`} className="text-[15px] leading-7 text-white/62">
+                        <p key={`${item.text}-${itemIndex}`} className="text-[15px] leading-7 text-white/76">
                           {item.text}
                         </p>
                       );
@@ -2371,18 +2371,18 @@ function AppStoreArticleReader({
               />
             )}
             <div>
-              <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">
+              <p className="text-[10px] uppercase tracking-[0.24em] text-white/44">
                 {chart} {rank && `· #${rank}`} {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
               </p>
               <h1 className="mt-2 max-w-[720px] text-[34px] font-semibold leading-[1.04] tracking-tight text-white md:text-[48px]">
                 {appName}
               </h1>
-              {maker && <p className="mt-2 text-[14px] text-white/46">{maker}</p>}
+              {maker && <p className="mt-2 text-[14px] text-white/60">{maker}</p>}
             </div>
           </div>
 
           {article.summary && (
-            <p className="mt-8 max-w-[760px] text-[16px] leading-8 text-white/62">
+            <p className="mt-8 max-w-[760px] text-[16px] leading-8 text-white/74">
               {article.summary}
             </p>
           )}
@@ -2390,7 +2390,7 @@ function AppStoreArticleReader({
           {genres.length > 0 && (
             <div className="mt-6 flex flex-wrap gap-2">
               {genres.slice(0, 8).map((genre) => (
-                <span key={genre} className="rounded-full border border-white/[0.08] px-3 py-1 text-[12px] text-white/58">
+                <span key={genre} className="rounded-full border border-white/[0.08] px-3 py-1 text-[12px] text-white/68">
                   {genre}
                 </span>
               ))}
@@ -2413,7 +2413,7 @@ function AppStoreArticleReader({
           <div className="grid gap-9 pt-6 md:grid-cols-[minmax(0,1fr)_300px]">
             <div>
               {(body || detailRows.length > 0 || releaseNotes || screenshots.length > 0 || isLoadingAppleDetails) && (
-                <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">App details</p>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-white/44">App details</p>
               )}
               {isLoadingAppleDetails && <p className="mt-5 text-[14px] text-white/38">Loading Apple details...</p>}
               {bodyParagraphs.length > 0 && <ArticleBodyScroll paragraphs={bodyParagraphs} />}
@@ -2421,21 +2421,21 @@ function AppStoreArticleReader({
                 <dl className="mt-8 grid gap-x-10 gap-y-5 sm:grid-cols-2">
                   {detailRows.map(([label, value]) => (
                     <div key={label} className="min-w-0">
-                      <dt className="text-[10px] uppercase tracking-[0.22em] text-white/28">{label}</dt>
-                      <dd className="mt-1 break-words text-[14px] leading-6 text-white/66">{value}</dd>
+                      <dt className="text-[10px] uppercase tracking-[0.22em] text-white/40">{label}</dt>
+                      <dd className="mt-1 break-words text-[14px] leading-6 text-white/76">{value}</dd>
                     </div>
                   ))}
                 </dl>
               )}
               {releaseNoteParagraphs.length > 0 && (
                 <div className="mt-8 border-t border-white/[0.055] pt-6">
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Latest version notes</p>
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/44">Latest version notes</p>
                   <ArticleBodyScroll paragraphs={releaseNoteParagraphs} compact={hasBriefReleaseNotes} />
                 </div>
               )}
               {screenshots.length > 0 && (
                 <div className="mt-9 pt-6">
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Screenshots</p>
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/44">Screenshots</p>
                   <div
                     ref={screenshotTrackRef}
                     onScroll={handleScreenshotScroll}
@@ -2507,18 +2507,18 @@ function AppStoreArticleReader({
               <dl className="grid content-start gap-5 text-[14px] sm:grid-cols-2 md:grid-cols-1">
                 {summaryRows.map(([label, value]) => (
                   <div key={label}>
-                    <dt className="text-[10px] uppercase tracking-[0.22em] text-white/28">{label}</dt>
-                    <dd className="mt-1 text-white/72">{value}</dd>
+                    <dt className="text-[10px] uppercase tracking-[0.22em] text-white/40">{label}</dt>
+                    <dd className="mt-1 text-white/82">{value}</dd>
                   </div>
                 ))}
               </dl>
             )}
             {advisories.length > 0 && (
               <div className="border-t border-white/[0.055] pt-5">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-white/28">Advisories</p>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">Advisories</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {advisories.map((advisoryText) => (
-                    <span key={advisoryText} className="rounded-full border border-white/[0.07] px-3 py-1 text-[12px] text-white/52">
+                    <span key={advisoryText} className="rounded-full border border-white/[0.07] px-3 py-1 text-[12px] text-white/64">
                       {advisoryText}
                     </span>
                   ))}

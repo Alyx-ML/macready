@@ -549,15 +549,15 @@ const VideoPlayer = ({ src }: { src: string }) => {
 
 function SectionKicker({ children }: { children: ReactNode }) {
   return (
-    <h3 className="mb-3 text-[10px] font-medium uppercase tracking-[0.18em] text-white/32">{children}</h3>
+    <h3 className="mb-3 text-[10px] font-medium uppercase tracking-[0.18em] text-white/44">{children}</h3>
   );
 }
 
 function DetailFact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-white/25">{label}</p>
-      <p className="truncate text-[14px] font-medium text-white/78">{value}</p>
+      <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-white/40">{label}</p>
+      <p className="truncate text-[14px] font-medium text-white/86">{value}</p>
     </div>
   );
 }
@@ -579,8 +579,8 @@ function OverviewCopy({ description }: { description: string }) {
     <div className="pb-2">
       <SectionKicker>Overview</SectionKicker>
       <div className="max-w-[76ch]">
-        <p className="text-[15px] leading-7 text-white/76">{lead}</p>
-        {body && <p className="mt-2 text-[13px] leading-7 text-white/54">{body}</p>}
+        <p className="text-[15px] leading-7 text-white/84">{lead}</p>
+        {body && <p className="mt-2 text-[13px] leading-7 text-white/68">{body}</p>}
       </div>
     </div>
   );
@@ -601,7 +601,7 @@ function SupportSignals({ categories }: { categories: string[] }) {
 
   return (
     <div>
-      <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/25">Steam Features</p>
+      <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/40">Steam Features</p>
       <div className="flex flex-wrap gap-1.5">
         {signals.map(({ label, Icon, active }) => (
           <span
@@ -632,13 +632,13 @@ function MacEvidence({ steam, aggregate, hasMacRequirements }: { steam: SteamMet
 
   return (
     <div>
-      <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/25">Mac Support</p>
+      <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/40">Mac Support</p>
       <div className="grid grid-cols-1 gap-1.5">
         {evidence.map(({ label, value, Icon }) => (
           <div key={label} className="grid grid-cols-[22px_1fr_auto] items-center gap-2 text-[11px]">
-            <Icon className="h-3.5 w-3.5 text-white/34" strokeWidth={1.75} />
-            <span className="text-white/38">{label}</span>
-            <span className="text-white/70">{value}</span>
+            <Icon className="h-3.5 w-3.5 text-white/46" strokeWidth={1.75} />
+            <span className="text-white/54">{label}</span>
+            <span className="text-white/80">{value}</span>
           </div>
         ))}
       </div>
@@ -702,8 +702,8 @@ function CompactSignal({ Icon, label, value, muted }: { Icon: LucideIcon; label:
     <div className="grid grid-cols-[24px_1fr] gap-2">
       <Icon className={cn("mt-0.5 h-4 w-4", muted ? "text-white/20" : "text-white/40")} strokeWidth={1.75} />
       <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-white/25">{label}</p>
-        <p className={cn("truncate text-[13px] font-medium", muted ? "text-white/32" : "text-white/72")}>{value}</p>
+        <p className="text-[10px] uppercase tracking-[0.16em] text-white/40">{label}</p>
+        <p className={cn("truncate text-[13px] font-medium", muted ? "text-white/42" : "text-white/82")}>{value}</p>
       </div>
     </div>
   );
@@ -737,8 +737,8 @@ function MyMacEstimate({ hardware, tests, aggregate, steam }: { hardware?: UserH
     <section className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/6 pb-5">
       <div className="min-w-0">
         <SectionKicker>My Mac Estimate</SectionKicker>
-        <p className="truncate text-[14px] text-white/78">{chip}{hardware?.ram_gb ? ` · ${hardware.ram_gb} GB` : ""}</p>
-        <p className="mt-1 truncate text-[12px] text-white/42">{detail}</p>
+        <p className="truncate text-[14px] text-white/86">{chip}{hardware?.ram_gb ? ` · ${hardware.ram_gb} GB` : ""}</p>
+        <p className="mt-1 truncate text-[12px] text-white/58">{detail}</p>
       </div>
       <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1 text-[12px] font-medium text-white/72">{title}</span>
     </section>
@@ -794,8 +794,8 @@ function RequirementBox({ title, minimum, recommended }: { title: string; minimu
         const [label, ...rest] = line.split(":");
         return (
           <div key={line} className="grid grid-cols-[68px_1fr] gap-2 text-[11px] leading-5">
-            <span className="text-white/28">{label}</span>
-            <span className="text-white/52">{rest.join(":").trim()}</span>
+            <span className="text-white/42">{label}</span>
+            <span className="text-white/68">{rest.join(":").trim()}</span>
           </div>
         );
       })}
@@ -804,7 +804,7 @@ function RequirementBox({ title, minimum, recommended }: { title: string; minimu
 
   return (
     <div className="relative -top-2 min-w-0">
-      <h3 className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-white/35">{title}</h3>
+      <h3 className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-white/46">{title}</h3>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         {minimum && (
           <div>
