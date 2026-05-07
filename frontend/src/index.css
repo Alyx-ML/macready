@@ -12,6 +12,10 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+  --mac-motion-fast: 180ms;
+  --mac-motion-standard: 220ms;
+  --mac-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --mac-ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }
 
 @utility scrollbar-hide {
@@ -72,7 +76,22 @@ body {
 }
 
 .animate-in {
-  animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fadeInUp var(--mac-motion-standard) var(--mac-ease-out) both;
+}
+
+.mac-page-transition {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.motion-surface {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 760px;
 }
 
 .safe-inline {

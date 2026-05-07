@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { GameDB } from "./components/GameDB";
+import { RouterProvider } from "@tanstack/react-router";
 import { SmoothScroll } from "./components/SmoothScroll";
+import { router } from "./router";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,7 +16,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SmoothScroll />
-      <GameDB />
+      <RouterProvider router={router} />
     </QueryClientProvider>
   );
 }

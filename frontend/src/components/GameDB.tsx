@@ -1,6 +1,8 @@
-import { forwardRef, useState, useCallback, useMemo, useRef, useEffect, type Dispatch, type HTMLAttributes, type SetStateAction } from "react";
+import { forwardRef, useState, useCallback, useMemo, useRef, useEffect, type Dispatch, type HTMLAttributes, type RefObject, type SetStateAction } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type { Game, MacNewsCategory, MacNewsItem, UserHardware } from "../types/gamedb";
 import { listGames, getDistinctValues, createGame, getMe, getMacNews, getAppStoreDetails, getSteamTrending, searchSteamCatalog, searchAppStore, isStaticDataMode, type SteamCatalogItem } from "../api/gamedb";
 import { FloatingAgentChat } from "./FloatingAgentChat";
@@ -254,12 +256,21 @@ function steamHeaderImageUrl(appId: string) {
   return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
 }
 
-export function GameDB() {
+type GameDBProps = {
+  routeView?: MainView;
+  routeDetailId?: number | null;
+  routeAccount?: boolean;
+};
+
+export function GameDB({ routeView = "home", routeDetailId = null, routeAccount = false }: GameDBProps) {
   const qc = useQueryClient();
-  const [detailId, setDetailId] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const routePathname = useLocation({ select: (location) => location.pathname });
+  const previousRoutePathname = useRef(routePathname);
+  const [detailId, setDetailId] = useState<number | null>(routeDetailId);
   const [showAccount, setShowAccount] = useState(false);
-  const [showAccountPage, setShowAccountPage] = useState(false);
-  const [mainView, setMainView] = useState<MainView>("home");
+  const [showAccountPage, setShowAccountPage] = useState(routeAccount);
+  const [mainView, setMainView] = useState<MainView>(routeView);
   const [pageTransitionKey, setPageTransitionKey] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [isLocked, setIsLocked] = useState(false);
@@ -271,16 +282,39 @@ export function GameDB() {
     afterUpdate?.();
     setPageTransitionKey((key) => key + 1);
   }, []);
+  const goHome = useCallback(() => {
+    navigate({ to: "/" });
+  }, [navigate]);
+  const goCompatibility = useCallback(() => {
+    navigate({ to: "/compatibility" });
+  }, [navigate]);
+  const goAccount = useCallback(() => {
+    navigate({ to: "/account" });
+  }, [navigate]);
+  const goGameDetail = useCallback((id: number) => {
+    navigate({ to: "/compatibility/$gameId", params: { gameId: String(id) } });
+  }, [navigate]);
+
+  useEffect(() => {
+    if (previousRoutePathname.current === routePathname) return;
+    previousRoutePathname.current = routePathname;
+    runPageCrossfade(() => {
+      setDetailId(routeDetailId);
+      setShowAccountPage(routeAccount);
+      setMainView(routeView);
+    });
+  }, [routeAccount, routeDetailId, routePathname, routeView, runPageCrossfade]);
+
   const handleAccountClick = useCallback(() => {
     if (user) {
       runPageCrossfade(() => {
         setDetailId(null);
         setShowAccountPage(true);
-      });
+      }, goAccount);
     } else {
       setShowAccount(true);
     }
-  }, [runPageCrossfade, user]);
+  }, [goAccount, runPageCrossfade, user]);
   const handleNavAction = useCallback((action: string) => {
     if (action === "lock-screen") {
       lockedAtRef.current = Date.now();
@@ -293,6 +327,7 @@ export function GameDB() {
         setDetailId(null);
         setShowAccountPage(false);
         setMainView("home");
+        goHome();
       }, () => {
         if (action === "news") {
           document.getElementById("macready-news")?.scrollIntoView({ behavior: "auto", block: "start" });
@@ -308,6 +343,7 @@ export function GameDB() {
         setDetailId(null);
         setShowAccountPage(false);
         setMainView("compatibility");
+        goCompatibility();
       }, () => {
         if (action === "games" || action === "reports") {
           document.getElementById("game-cards")?.scrollIntoView({ behavior: "auto", block: "start" });
@@ -317,7 +353,7 @@ export function GameDB() {
         }
       });
     }
-  }, [runPageCrossfade]);
+  }, [goCompatibility, goHome, runPageCrossfade]);
 
   useEffect(() => {
     const videos = Array.from(document.querySelectorAll("video"));
@@ -477,7 +513,7 @@ export function GameDB() {
 
   const handleAddSteamGame = async (item: SteamCatalogItem) => {
     if (isStaticDataMode) {
-      runPageCrossfade(() => setDetailId(Number(item.steam_app_id)));
+      runPageCrossfade(() => setDetailId(Number(item.steam_app_id)), () => goGameDetail(Number(item.steam_app_id)));
       return;
     }
     setAddingSteamId(item.steam_app_id);
@@ -491,11 +527,11 @@ export function GameDB() {
         store_url: `https://store.steampowered.com/app/${item.steam_app_id}`,
       });
       qc.invalidateQueries({ queryKey: ["gamedb"] });
-      runPageCrossfade(() => setDetailId(res.id));
+      runPageCrossfade(() => setDetailId(res.id), () => goGameDetail(res.id));
     } catch (e: any) {
       if (e.message?.includes("UNIQUE")) {
         const existing = (games || []).find(g => g.steam_app_id === item.steam_app_id || g.name === item.name);
-        if (existing) runPageCrossfade(() => setDetailId(existing.id));
+        if (existing) runPageCrossfade(() => setDetailId(existing.id), () => goGameDetail(existing.id));
       } else {
         alert(e.message);
       }
@@ -531,7 +567,7 @@ export function GameDB() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.14, ease: "easeOut" }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
           >
       <div className="relative w-full h-[35vh] min-h-[245px] max-h-[350px] overflow-hidden">
         <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-contain" src={`${import.meta.env.BASE_URL}media/hero.webm`} />
@@ -556,14 +592,14 @@ export function GameDB() {
       <div className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 pb-12">
             {showAccountPage ? (
               <AccountPage
-                onBack={() => runPageCrossfade(() => setShowAccountPage(false))}
+                onBack={() => runPageCrossfade(() => setShowAccountPage(false), goHome)}
                 onLogout={() => {
                   setUser(null);
-                  runPageCrossfade(() => setShowAccountPage(false));
+                  runPageCrossfade(() => setShowAccountPage(false), goHome);
                 }}
               />
             ) : detailId !== null ? (
-              <GameDetailView gameId={detailId} primaryHardware={primaryHardware} onBack={() => runPageCrossfade(() => setDetailId(null))} onAddTest={() => qc.invalidateQueries({ queryKey: ["gamedb", "game", detailId] })} />
+              <GameDetailView gameId={detailId} primaryHardware={primaryHardware} onBack={() => runPageCrossfade(() => setDetailId(null), goCompatibility)} onAddTest={() => qc.invalidateQueries({ queryKey: ["gamedb", "game", detailId] })} />
             ) : mainView === "home" ? (
               <HomeEditorialPage
                 newsItems={macNews ?? []}
@@ -572,7 +608,10 @@ export function GameDB() {
                   setDetailId(null);
                   setShowAccountPage(false);
                   setMainView("compatibility");
-                }, () => window.scrollTo({ top: 0, behavior: "auto" }))}
+                }, () => {
+                  goCompatibility();
+                  window.scrollTo({ top: 0, behavior: "auto" });
+                })}
               />
             ) : (
               <GameListView
@@ -591,7 +630,7 @@ export function GameDB() {
                 setMacosFilter={setMacosFilter}
                 hwFilter={hwFilter}
                 setHwFilter={setHwFilter}
-                onOpenDetail={(id) => runPageCrossfade(() => setDetailId(id))}
+                onOpenDetail={(id) => runPageCrossfade(() => setDetailId(id), () => goGameDetail(id))}
                 steamResults={steamResults}
                 steamLoading={steamLoading}
                 addingSteamId={addingSteamId}
@@ -1015,6 +1054,7 @@ function GameListView({
                         onOpenDetail={onOpenDetail}
                         hardware={primaryHardware}
                         eagerCount={INITIAL_COMPATIBILITY_CARD_COUNT}
+                        virtualScrollRef={steamScrollerRef}
                       />
                     </section>
                   )}
@@ -1027,6 +1067,7 @@ function GameListView({
                         onSelect={onAddSteamGame}
                         onOpenDetail={onOpenDetail}
                         hardware={primaryHardware}
+                        virtualScrollRef={steamScrollerRef}
                       />
                     </section>
                   )}
@@ -1256,7 +1297,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.14, ease: "easeOut" }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
           >
         {selectedArticle ? (
           <ArticleReader article={selectedArticle} onBack={closeArticle} formatDate={formatDate} />
@@ -1367,7 +1408,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
               </aside>
             </section>
 
-            <section className={["mt-12 grid gap-12", activeCategory === "News" ? "xl:grid-cols-[minmax(0,1fr)_330px]" : ""].join(" ")}>
+            <section className={["content-visibility-auto mt-12 grid gap-12", activeCategory === "News" ? "xl:grid-cols-[minmax(0,1fr)_330px]" : ""].join(" ")}>
               <div>
                 <div className="mb-5 flex items-end justify-between">
                   <h2 className="text-[22px] font-semibold tracking-tight text-white">{NEWS_CATEGORY_LABELS[activeCategory]}</h2>
@@ -1752,7 +1793,7 @@ function AppStoreFeed({
         )}
 
         {remainingApps.length > 0 && !isSearchingApps && (
-          <div className="mt-10">
+          <div className="content-visibility-auto mt-10">
             <p className="mb-5 text-[10px] uppercase tracking-[0.24em] text-white/24">{appSearchQuery ? "More results" : "More from the charts"}</p>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(132px,1fr))] gap-x-4 gap-y-7 xl:grid-cols-6">
               {remainingApps.map((article) => {
@@ -2409,7 +2450,7 @@ function AppStoreArticleReader({
       </section>
 
       {(body || detailRows.length > 0 || releaseNotes || screenshots.length > 0 || advisories.length > 0 || isLoadingAppleDetails) && (
-        <section className="pt-7">
+        <section className="content-visibility-auto pt-7">
           <div className="grid gap-9 pt-6 md:grid-cols-[minmax(0,1fr)_300px]">
             <div>
               {(body || detailRows.length > 0 || releaseNotes || screenshots.length > 0 || isLoadingAppleDetails) && (
@@ -2793,61 +2834,151 @@ function steamCardEstimate(game: any, hardware?: UserHardware | null) {
   return chip ? `${chip}: No Mac reports` : "No Mac reports";
 }
 
-function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail, hardware, eagerCount = 0 }: { games: any[]; addingSteamId: string | null; onSelect: (g: any) => void; onOpenDetail: (id: number) => void; hardware?: UserHardware | null; eagerCount?: number }) {
-  if (games.length === 0) return null;
+function SteamGameCard({
+  game,
+  index,
+  addingSteamId,
+  onSelect,
+  onOpenDetail,
+  hardware,
+  eagerCount,
+}: {
+  game: any;
+  index: number;
+  addingSteamId: string | null;
+  onSelect: (g: any) => void;
+  onOpenDetail: (id: number) => void;
+  hardware?: UserHardware | null;
+  eagerCount: number;
+}) {
+  const isLocal = game.isLocal;
+  const tier = isLocal ? (game.aggregate_tier || game.latest_test?.status) : null;
+  const loadImmediately = index < eagerCount;
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      {games.map((r, index) => {
-        const isLocal = r.isLocal;
-        const tier = isLocal ? (r.aggregate_tier || r.latest_test?.status) : null;
-        const loadImmediately = index < eagerCount;
-        return (
-          <EdgeLightWrapper 
-            key={r.steam_app_id}
-            aria-label={r.name}
-            data-steam-card="true"
-            onClick={() => isLocal ? onOpenDetail(r.id) : onSelect(r)} 
-            disabled={!isLocal && addingSteamId === r.steam_app_id}
-            className="group w-full text-left liquid-glass transition-colors duration-300 focus:outline-none shadow-xl"
-            radius="1rem"
-          >
-            <div className="relative w-full aspect-[460/215] bg-transparent overflow-hidden rounded-2xl">
-              {!isLocal && addingSteamId === r.steam_app_id && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
-                  <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                </div>
-              )}
-              <img
-                src={r.cover_art_url}
-                loading={loadImmediately ? "eager" : "lazy"}
-                decoding="async"
-                width={460}
-                height={215}
-                className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300"
-                alt={r.name}
-                onError={(event) => {
-                  const card = event.currentTarget.closest('[data-steam-card]') as HTMLElement | null;
-                  if (card) card.style.display = "none";
-                }}
-              />
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300 z-10" />
-              
-              <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
-                <div className="flex items-end justify-between gap-2">
-                  <h3 className="min-w-0 truncate pr-2 text-[13px] font-medium text-white drop-shadow-md">{r.name}</h3>
-                  {isLocal && tier && (
-                    <div className="flex-none scale-90 origin-bottom-right">
-                      <TierBadge tier={tier} size="sm" />
-                    </div>
-                  )}
-                </div>
-                <p className="mt-1 truncate text-[10px] text-white/42">{steamCardEstimate(r, hardware)}</p>
+    <EdgeLightWrapper
+      key={game.steam_app_id}
+      aria-label={game.name}
+      data-steam-card="true"
+      onClick={() => isLocal ? onOpenDetail(game.id) : onSelect(game)}
+      disabled={!isLocal && addingSteamId === game.steam_app_id}
+      className="group w-full text-left liquid-glass transition-colors duration-300 focus:outline-none shadow-xl"
+      radius="1rem"
+    >
+      <div className="relative w-full aspect-[460/215] bg-transparent overflow-hidden rounded-2xl">
+        {!isLocal && addingSteamId === game.steam_app_id && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
+            <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          </div>
+        )}
+        <img
+          src={game.cover_art_url}
+          loading={loadImmediately ? "eager" : "lazy"}
+          decoding="async"
+          width={460}
+          height={215}
+          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300"
+          alt={game.name}
+          onError={(event) => {
+            const card = event.currentTarget.closest('[data-steam-card]') as HTMLElement | null;
+            if (card) card.style.display = "none";
+          }}
+        />
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300 z-10" />
+
+        <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+          <div className="flex items-end justify-between gap-2">
+            <h3 className="min-w-0 truncate pr-2 text-[13px] font-medium text-white drop-shadow-md">{game.name}</h3>
+            {isLocal && tier && (
+              <div className="flex-none scale-90 origin-bottom-right">
+                <TierBadge tier={tier} size="sm" />
               </div>
+            )}
+          </div>
+          <p className="mt-1 truncate text-[10px] text-white/42">{steamCardEstimate(game, hardware)}</p>
+        </div>
+      </div>
+    </EdgeLightWrapper>
+  );
+}
+
+function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail, hardware, eagerCount = 0, virtualScrollRef }: { games: any[]; addingSteamId: string | null; onSelect: (g: any) => void; onOpenDetail: (id: number) => void; hardware?: UserHardware | null; eagerCount?: number; virtualScrollRef?: RefObject<HTMLDivElement | null> }) {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [gridWidth, setGridWidth] = useState(0);
+
+  useEffect(() => {
+    const node = gridRef.current;
+    if (!node) return;
+    const updateWidth = () => setGridWidth(node.getBoundingClientRect().width);
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const shouldVirtualize = Boolean(virtualScrollRef) && games.length > INITIAL_COMPATIBILITY_CARD_COUNT;
+  const columnCount = gridWidth >= 1280 ? 5 : gridWidth >= 1024 ? 4 : gridWidth >= 640 ? 3 : 2;
+  const gap = 16;
+  const cardWidth = gridWidth > 0 ? (gridWidth - gap * (columnCount - 1)) / columnCount : 320;
+  const rowHeight = Math.max(112, Math.round(cardWidth * (215 / 460) + gap));
+  const rowCount = Math.ceil(games.length / columnCount);
+  const scrollMargin = shouldVirtualize ? gridRef.current?.offsetTop ?? 0 : 0;
+  const rowVirtualizer = useVirtualizer({
+    count: shouldVirtualize ? rowCount : 0,
+    getScrollElement: () => virtualScrollRef?.current ?? null,
+    estimateSize: () => rowHeight,
+    scrollMargin,
+    overscan: 3,
+  });
+
+  if (games.length === 0) return null;
+
+  if (shouldVirtualize) {
+    const virtualRows = rowVirtualizer.getVirtualItems();
+    return (
+      <div ref={gridRef} className="relative w-full" style={{ height: rowVirtualizer.getTotalSize() }}>
+        {virtualRows.map((virtualRow) => {
+          const start = virtualRow.index * columnCount;
+          const rowGames = games.slice(start, start + columnCount);
+          return (
+            <div
+              key={virtualRow.key}
+              className="absolute left-0 top-0 grid w-full grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+              style={{ transform: `translateY(${virtualRow.start - scrollMargin}px)` }}
+            >
+              {rowGames.map((game, rowIndex) => (
+                <SteamGameCard
+                  key={game.steam_app_id}
+                  game={game}
+                  index={start + rowIndex}
+                  addingSteamId={addingSteamId}
+                  onSelect={onSelect}
+                  onOpenDetail={onOpenDetail}
+                  hardware={hardware}
+                  eagerCount={eagerCount}
+                />
+              ))}
             </div>
-          </EdgeLightWrapper>
-        );
-      })}
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      {games.map((game, index) => (
+        <SteamGameCard
+          key={game.steam_app_id}
+          game={game}
+          index={index}
+          addingSteamId={addingSteamId}
+          onSelect={onSelect}
+          onOpenDetail={onOpenDetail}
+          hardware={hardware}
+          eagerCount={eagerCount}
+        />
+      ))}
     </div>
   );
 }

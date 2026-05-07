@@ -512,7 +512,7 @@ export function TopNavbar({ user, onAccountClick, onNavigate }: { user: User | n
       <style>{`
         .mac-menu-dropdown {
           opacity: 0;
-          animation: macMenuFadeIn 90ms ease-out forwards;
+          animation: macMenuFadeIn var(--mac-motion-fast) var(--mac-ease-out) forwards;
           transform-origin: top center;
           will-change: opacity;
         }

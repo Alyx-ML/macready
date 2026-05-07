@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 
 type StaticNewsItem = {
@@ -49,6 +49,14 @@ export default defineConfig({
       transformIndexHtml(html) {
         const preload = getNewsHeroPreload();
         return preload ? html.replace("    <title>MacReady</title>", `    ${preload}\n    <title>MacReady</title>`) : html;
+      },
+    },
+    {
+      name: "macready-spa-404",
+      closeBundle() {
+        if (process.env.GITHUB_PAGES !== "true") return;
+        const indexHtml = readFileSync("dist/index.html", "utf8");
+        writeFileSync("dist/404.html", indexHtml);
       },
     },
   ],
