@@ -187,7 +187,7 @@ export function GameDetailView({ gameId, onBack, onAddTest, primaryHardware }: {
       )}
 
       {hasRequirements && (
-        <section className="border-b border-white/6 pb-5">
+        <section className="content-visibility-auto border-b border-white/6 pb-5">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
             <div className={cn("grid grid-cols-1 gap-5", requirementsGridClass)}>
               {(macRequirements?.minimum || macRequirements?.recommended) && (
@@ -217,7 +217,7 @@ export function GameDetailView({ gameId, onBack, onAddTest, primaryHardware }: {
       />
 
       {aggregate && aggregate.total_reports > 0 && (
-        <section className="border-b border-white/6 pb-5">
+        <section className="content-visibility-auto border-b border-white/6 pb-5">
           <SectionKicker>Compatibility Breakdown</SectionKicker>
           <div className="space-y-2">
             {Object.entries(aggregate.breakdown).map(([tier, count]) => {
@@ -238,7 +238,7 @@ export function GameDetailView({ gameId, onBack, onAddTest, primaryHardware }: {
       )}
 
       {hardware_matrix && hardware_matrix.length > 0 && (
-        <section className="overflow-hidden border-b border-white/6 pb-5">
+        <section className="content-visibility-auto overflow-hidden border-b border-white/6 pb-5">
           <SectionKicker>Hardware Compatibility</SectionKicker>
           <table className="w-full text-[12px]">
             <thead>
