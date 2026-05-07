@@ -2745,16 +2745,22 @@ function HeroCarousel({ games, addingSteamId, onSelect, onOpenDetail }: { games:
   if (visibleGames.length === 0) return null;
   
   return (
-    <div className="-mx-4 sm:mx-0">
+    <div className="-mx-4 overflow-hidden sm:mx-0">
       <style>{`
         @keyframes heroCarouselDrift {
           0% { transform: translate3d(0, 0, 0); }
-          100% { transform: translate3d(-24px, 0, 0); }
+          100% { transform: translate3d(-34px, 0, 0); }
         }
 
         .hero-carousel-track {
-          animation: heroCarouselDrift 26s ease-in-out infinite alternate;
+          animation: heroCarouselDrift 18s cubic-bezier(0.25, 0.1, 0.25, 1) infinite alternate;
           will-change: transform;
+        }
+
+        @media (max-width: 639px) {
+          .hero-carousel-track {
+            animation-duration: 14s;
+          }
         }
 
         .hero-carousel-card-distant img {
@@ -2767,8 +2773,8 @@ function HeroCarousel({ games, addingSteamId, onSelect, onOpenDetail }: { games:
           opacity: 0.95;
         }
       `}</style>
-      <div className="pb-6 px-4 sm:px-0">
-        <div className="hero-carousel-track mx-auto flex w-full max-w-[1500px] justify-center gap-4">
+      <div className="px-4 pb-5 sm:px-0 sm:pb-6">
+        <div className="hero-carousel-track flex w-max max-w-none justify-start gap-3 sm:mx-auto sm:w-full sm:max-w-[1500px] sm:justify-center sm:gap-4">
         {visibleGames.map((r, index) => {
           const isLocal = r.isLocal;
           const tier = isLocal ? (r.aggregate_tier || r.latest_test?.status) : null;
@@ -2780,7 +2786,7 @@ function HeroCarousel({ games, addingSteamId, onSelect, onOpenDetail }: { games:
               data-steam-card="true"
               onClick={() => isLocal ? onOpenDetail(r.id) : onSelect(r)} 
               disabled={!isLocal && addingSteamId === r.steam_app_id}
-              className={`flex-none w-[280px] sm:w-[300px] text-left liquid-glass transition-colors duration-300 focus:outline-none shadow-xl ${distantClass}`}
+              className={`flex-none w-[min(72vw,260px)] text-left liquid-glass transition-colors duration-200 focus:outline-none shadow-xl sm:w-[300px] ${distantClass}`}
               radius="0.75rem"
             >
               <div className="relative w-full aspect-[460/215] bg-[#111] overflow-hidden">
