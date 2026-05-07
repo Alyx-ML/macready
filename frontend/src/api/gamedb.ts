@@ -47,6 +47,29 @@ function getToken(): string | null {
   return localStorage.getItem("macgamedb_token");
 }
 
+const TOUCH_ID_CREDENTIALS_KEY = "macready_touch_id_credentials";
+
+function readTouchIdCredentialIds(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(TOUCH_ID_CREDENTIALS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string" && id.length > 0) : [];
+  } catch {
+    localStorage.removeItem(TOUCH_ID_CREDENTIALS_KEY);
+    return [];
+  }
+}
+
+function rememberTouchIdCredential(id?: string) {
+  if (!id) return;
+  const ids = new Set(readTouchIdCredentialIds());
+  ids.add(id);
+  localStorage.setItem(TOUCH_ID_CREDENTIALS_KEY, JSON.stringify(Array.from(ids)));
+}
+
+export function hasSavedTouchIdCredential(): boolean {
+  return readTouchIdCredentialIds().length > 0;
+}
+
 function authHeaders(): Record<string, string> {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -409,6 +432,58 @@ export async function login(email: string, password: string): Promise<{ user: Us
     body: JSON.stringify({ email, password }),
   });
   localStorage.setItem("macgamedb_token", data.token);
+  return data;
+}
+
+export async function getPasskeyRegistrationOptions(): Promise<any> {
+  return fetchJSON(`${BASE}/auth/passkeys/register/options`, { method: "POST" });
+}
+
+export async function verifyPasskeyRegistration(credential: any): Promise<{ success: boolean; credentialId?: string }> {
+  const data = await fetchJSON<{ success: boolean; credentialId?: string }>(`${BASE}/auth/passkeys/register/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
+  });
+  rememberTouchIdCredential(data.credentialId);
+  return data;
+}
+
+export async function getPasskeySignupOptions(displayName: string): Promise<any> {
+  return fetchJSON(`${BASE}/auth/passkeys/signup/options`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ displayName }),
+  });
+}
+
+export async function verifyPasskeySignup(requestId: string, credential: any): Promise<{ user: User; token: string; credentialId?: string }> {
+  const data = await fetchJSON<{ user: User; token: string; credentialId?: string }>(`${BASE}/auth/passkeys/signup/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requestId, credential }),
+  });
+  localStorage.setItem("macgamedb_token", data.token);
+  rememberTouchIdCredential(data.credentialId);
+  return data;
+}
+
+export async function getPasskeyLoginOptions(): Promise<any> {
+  return fetchJSON(`${BASE}/auth/passkeys/login/options`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credentialIds: readTouchIdCredentialIds() }),
+  });
+}
+
+export async function verifyPasskeyLogin(credential: any, requestId: string): Promise<{ user: User; token: string; credentialId?: string }> {
+  const data = await fetchJSON<{ user: User; token: string; credentialId?: string }>(`${BASE}/auth/passkeys/login/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential, requestId }),
+  });
+  localStorage.setItem("macgamedb_token", data.token);
+  rememberTouchIdCredential(data.credentialId);
   return data;
 }
 

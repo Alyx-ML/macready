@@ -96,6 +96,16 @@ export function getDB(projectDir: string): Database {
     expires_at DATETIME
   );
 
+  CREATE TABLE IF NOT EXISTS passkey_credentials (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    public_key TEXT NOT NULL,
+    counter INTEGER NOT NULL DEFAULT 0,
+    transports TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_used_at DATETIME
+  );
+
   CREATE INDEX IF NOT EXISTS idx_tests_game ON tests(game_id);
   CREATE INDEX IF NOT EXISTS idx_tests_status ON tests(status);
   CREATE INDEX IF NOT EXISTS idx_tests_wine ON tests(wine_version);
@@ -104,6 +114,7 @@ export function getDB(projectDir: string): Database {
   CREATE INDEX IF NOT EXISTS idx_issues_resolved ON issues(resolved);
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
   CREATE INDEX IF NOT EXISTS idx_user_hardware_user ON user_hardware(user_id);
+  CREATE INDEX IF NOT EXISTS idx_passkey_credentials_user ON passkey_credentials(user_id);
   `;
   
   db.exec(schema);

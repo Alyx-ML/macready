@@ -10,6 +10,7 @@
     "frontend": "cd frontend && bun run dev"
   },
   "dependencies": {
+    "@simplewebauthn/server": "^13.3.0",
     "concurrently": "^9.1.2"
   }
 }

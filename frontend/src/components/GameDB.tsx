@@ -562,14 +562,6 @@ export function GameDB({ routeView = "home", routeDetailId = null, routeAccount 
               <h1 className="text-[32px] font-bold tracking-tight text-white drop-shadow-lg" style={{ fontFamily: 'Aeonik, sans-serif' }}>MacReady</h1>
               <p className="text-[14px] text-white/50 mt-1" style={{ fontFamily: 'Aeonik, sans-serif' }}>A clearer way to judge Mac game support</p>
         </div>
-        
-        {showAccount && (
-          <AuthModal 
-            user={user}
-            onClose={() => setShowAccount(false)} 
-            onLoggedIn={(u) => { setUser(u); setShowAccount(false); }}
-          />
-        )}
       </div>
 
       <div className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 pb-12">
@@ -632,6 +624,13 @@ export function GameDB({ routeView = "home", routeDetailId = null, routeAccount 
       <FlickeringFooter />
           </motion.main>
         </AnimatePresence>
+        {showAccount && (
+          <AuthModal
+            user={user}
+            onClose={() => setShowAccount(false)}
+            onLoggedIn={(u) => { setUser(u); setShowAccount(false); }}
+          />
+        )}
       </div>
       <FloatingAgentChat mode="gamedb" onFileChange={() => qc.invalidateQueries({ queryKey: ["gamedb", "games"] })} />
       </div>
@@ -1196,6 +1195,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
   const articlePool = activeArticles.slice(4);
   const articleList = articlePool.slice(0, visibleArticleCount);
   const latestAcrossSources = newsItems.slice(0, 8);
+  const compactPageHeight = (activeCategory === "App Store" || activeCategory === "Performance") && !selectedArticle;
 
   const formatDate = (value?: string) => {
     if (!value) return "";
@@ -1224,7 +1224,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
   };
 
   return (
-    <main id="macready-news" className="animate-in min-h-[1580px] pb-16">
+    <main id="macready-news" className={["animate-in pb-16", compactPageHeight ? "" : "min-h-[1580px]"].join(" ")}>
       <div className="mx-auto max-w-[1420px] px-4 sm:px-6">
         <header className="flex justify-center pt-2 pb-7">
           <nav

@@ -1,4 +1,15 @@
 import { serve } from "bun";
+import {
+  generateAuthenticationOptions,
+  generateRegistrationOptions,
+  verifyAuthenticationResponse,
+  verifyRegistrationResponse,
+} from "@simplewebauthn/server";
+import type {
+  AuthenticationResponseJSON,
+  AuthenticatorTransportFuture,
+  RegistrationResponseJSON,
+} from "@simplewebauthn/server";
 import { getDB } from "./db.ts";
 import { handleAgentCommand } from "./agent.ts";
 import { join } from "path";
@@ -9,6 +20,7 @@ const PROJECT_DIR = process.argv[2] || process.cwd();
 const BASE_PORT = parseInt(process.env.PORT || "8421");
 
 const db = getDB(PROJECT_DIR);
+const passkeyChallenges = new Map<string, { challenge: string; userId?: number; email?: string; displayName?: string; pendingUserId?: string; expiresAt: number }>();
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -651,6 +663,51 @@ function getSessionUser(req: Request): any {
   return db.query(`SELECT id, email, display_name, created_at FROM users WHERE id = ?`).get(session.user_id);
 }
 
+function getPasskeyContext(req: Request) {
+  const url = new URL(req.url);
+  const originHeader = req.headers.get("Origin");
+  const origin = originHeader || `${url.protocol}//${url.host}`;
+  const hostname = new URL(origin).hostname;
+  const rpID = hostname === "127.0.0.1" ? "localhost" : hostname;
+  return { origin, rpID, rpName: "MacReady" };
+}
+
+function storePasskeyChallenge(key: string, challenge: string, extra: { userId?: number; email?: string; displayName?: string; pendingUserId?: string } = {}) {
+  passkeyChallenges.set(key, { challenge, ...extra, expiresAt: Date.now() + 5 * 60_000 });
+}
+
+function takePasskeyChallenge(key: string) {
+  const stored = passkeyChallenges.get(key);
+  passkeyChallenges.delete(key);
+  if (!stored || stored.expiresAt < Date.now()) return null;
+  return stored;
+}
+
+function parseTransports(value: string | null): AuthenticatorTransportFuture[] | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function getCredentialForVerification(row: any) {
+  return {
+    id: row.id,
+    publicKey: Buffer.from(row.public_key, "base64url"),
+    counter: row.counter || 0,
+    transports: parseTransports(row.transports),
+  };
+}
+
+function createSession(userId: number) {
+  const sessionId = crypto.randomUUID();
+  db.query(`INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, datetime('now', '+30 days'))`).run(sessionId, userId);
+  return sessionId;
+}
+
 // ── Steam cover art helper ──────────────────────────────────────────
 function getSteamCoverUrl(steamAppId: string | null): string | null {
   if (!steamAppId) return null;
@@ -833,8 +890,7 @@ export async function handler(req: Request): Promise<Response> {
       const hash = await hashPassword(body.password);
       db.query(`INSERT INTO users (email, password_hash, display_name) VALUES (?, ?, ?)`).run(body.email, hash, body.display_name);
       const user = db.query(`SELECT id, email, display_name, created_at FROM users WHERE id = last_insert_rowid()`).get() as any;
-      const sessionId = crypto.randomUUID();
-      db.query(`INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, datetime('now', '+30 days'))`).run(sessionId, user.id);
+      const sessionId = createSession(user.id);
       return json({ user, token: sessionId }, 201);
     } catch (e: any) {
       if (e.message?.includes("UNIQUE")) return err("Email already registered", 409);
@@ -849,8 +905,7 @@ export async function handler(req: Request): Promise<Response> {
     const hash = await hashPassword(body.password);
     const user = db.query(`SELECT id, email, display_name, created_at FROM users WHERE email = ? AND password_hash = ?`).get(body.email, hash) as any;
     if (!user) return err("Invalid credentials", 401);
-    const sessionId = crypto.randomUUID();
-    db.query(`INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, datetime('now', '+30 days'))`).run(sessionId, user.id);
+    const sessionId = createSession(user.id);
     return json({ user, token: sessionId });
   }
 
@@ -869,6 +924,181 @@ export async function handler(req: Request): Promise<Response> {
       db.query(`DELETE FROM sessions WHERE id = ?`).run(authHeader.slice(7));
     }
     return json({ success: true });
+  }
+
+  // ── AUTH: Passkeys ────────────────────────────────────────────────
+  if (method === "POST" && path === "/api/v1/gamedb/auth/passkeys/register/options") {
+    const user = getSessionUser(req);
+    if (!user) return err("Not authenticated", 401);
+    const { origin, rpID, rpName } = getPasskeyContext(req);
+    const existing = db.query(`SELECT id, transports FROM passkey_credentials WHERE user_id = ?`).all(user.id) as any[];
+    const options = await generateRegistrationOptions({
+      rpName,
+      rpID,
+      userID: new TextEncoder().encode(String(user.id)),
+      userName: user.email,
+      userDisplayName: user.display_name,
+      attestationType: "none",
+      authenticatorSelection: {
+        authenticatorAttachment: "platform",
+        residentKey: "required",
+        userVerification: "required",
+      },
+      excludeCredentials: existing.map((credential) => ({
+        id: credential.id,
+        transports: parseTransports(credential.transports),
+      })),
+      preferredAuthenticatorType: "localDevice",
+    });
+    storePasskeyChallenge(`register:${user.id}`, options.challenge, { userId: user.id });
+    return json({ options, origin });
+  }
+
+  if (method === "POST" && path === "/api/v1/gamedb/auth/passkeys/register/verify") {
+    const user = getSessionUser(req);
+    if (!user) return err("Not authenticated", 401);
+    const body = await req.json() as { credential?: RegistrationResponseJSON };
+    if (!body.credential) return err("Passkey response required");
+    const stored = takePasskeyChallenge(`register:${user.id}`);
+    if (!stored) return err("Passkey request expired", 400);
+    const { origin, rpID } = getPasskeyContext(req);
+    const verification = await verifyRegistrationResponse({
+      response: body.credential,
+      expectedChallenge: stored.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      requireUserVerification: true,
+    });
+    if (!verification.verified) return err("Passkey could not be verified", 401);
+    const credential = verification.registrationInfo.credential;
+    db.query(`
+      INSERT OR REPLACE INTO passkey_credentials (id, user_id, public_key, counter, transports, last_used_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `).run(
+      credential.id,
+      user.id,
+      Buffer.from(credential.publicKey).toString("base64url"),
+      credential.counter,
+      JSON.stringify(body.credential.response.transports || []),
+    );
+    return json({ success: true, credentialId: credential.id });
+  }
+
+  if (method === "POST" && path === "/api/v1/gamedb/auth/passkeys/signup/options") {
+    const body = await req.json().catch(() => ({})) as { displayName?: string };
+    const displayName = String(body.displayName || "").trim();
+    if (!displayName) return err("Display name required");
+    const { origin, rpID, rpName } = getPasskeyContext(req);
+    const requestId = crypto.randomUUID();
+    const pendingUserId = crypto.randomUUID();
+    const options = await generateRegistrationOptions({
+      rpName,
+      rpID,
+      userID: new TextEncoder().encode(pendingUserId),
+      userName: `macready-${pendingUserId}`,
+      userDisplayName: displayName,
+      attestationType: "none",
+      authenticatorSelection: {
+        authenticatorAttachment: "platform",
+        residentKey: "required",
+        userVerification: "required",
+      },
+      preferredAuthenticatorType: "localDevice",
+    });
+    storePasskeyChallenge(`signup:${requestId}`, options.challenge, { displayName, pendingUserId });
+    return json({ options, origin, requestId });
+  }
+
+  if (method === "POST" && path === "/api/v1/gamedb/auth/passkeys/signup/verify") {
+    const body = await req.json() as { requestId?: string; credential?: RegistrationResponseJSON };
+    if (!body.requestId || !body.credential) return err("Passkey response required");
+    const stored = takePasskeyChallenge(`signup:${body.requestId}`);
+    if (!stored?.displayName || !stored.pendingUserId) return err("Passkey request expired", 400);
+    const { origin, rpID } = getPasskeyContext(req);
+    const verification = await verifyRegistrationResponse({
+      response: body.credential,
+      expectedChallenge: stored.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      requireUserVerification: true,
+    });
+    if (!verification.verified) return err("Passkey could not be verified", 401);
+    const credential = verification.registrationInfo.credential;
+    try {
+      const result = db.transaction(() => {
+        const accountId = crypto.randomUUID();
+        const email = `passkey-${accountId}@macready.local`;
+        const passwordHash = `passkey-only:${crypto.randomUUID()}`;
+        db.query(`INSERT INTO users (email, password_hash, display_name) VALUES (?, ?, ?)`).run(email, passwordHash, stored.displayName);
+        const user = db.query(`SELECT id, email, display_name, created_at FROM users WHERE id = last_insert_rowid()`).get() as any;
+        db.query(`
+          INSERT OR REPLACE INTO passkey_credentials (id, user_id, public_key, counter, transports, last_used_at)
+          VALUES (?, ?, ?, ?, ?, datetime('now'))
+        `).run(
+          credential.id,
+          user.id,
+          Buffer.from(credential.publicKey).toString("base64url"),
+          credential.counter,
+          JSON.stringify(body.credential.response.transports || []),
+        );
+        const token = createSession(user.id);
+        return { user, token };
+      })();
+      return json({ ...result, credentialId: credential.id }, 201);
+    } catch (e: any) {
+      if (String(e?.message || "").includes("UNIQUE")) return err("Email already registered", 409);
+      throw e;
+    }
+  }
+
+  if (method === "POST" && path === "/api/v1/gamedb/auth/passkeys/login/options") {
+    const body = await req.json().catch(() => ({})) as { credentialIds?: string[] };
+    const credentialIds = Array.isArray(body.credentialIds)
+      ? body.credentialIds.filter((id) => typeof id === "string" && id.length > 0)
+      : [];
+    const uniqueCredentialIds = Array.from(new Set(credentialIds));
+    if (uniqueCredentialIds.length === 0) {
+      return err("No Touch ID passkey saved on this Mac", 404);
+    }
+    const { rpID } = getPasskeyContext(req);
+    const options = await generateAuthenticationOptions({
+      rpID,
+      allowCredentials: uniqueCredentialIds.map((id) => ({
+        id,
+        transports: ["internal"] as AuthenticatorTransportFuture[],
+      })),
+      userVerification: "required",
+    });
+    const requestId = crypto.randomUUID();
+    storePasskeyChallenge(`login:${requestId}`, options.challenge);
+    return json({ options, requestId });
+  }
+
+  if (method === "POST" && path === "/api/v1/gamedb/auth/passkeys/login/verify") {
+    const body = await req.json() as { credential?: AuthenticationResponseJSON; requestId?: string };
+    if (!body.credential || !body.requestId) return err("Passkey response required");
+    const stored = takePasskeyChallenge(`login:${body.requestId}`);
+    if (!stored) return err("Passkey request expired", 400);
+    const credentialRow = db.query(`SELECT * FROM passkey_credentials WHERE id = ?`).get(body.credential.id) as any;
+    if (!credentialRow) return err("Passkey not registered", 401);
+    const { origin, rpID } = getPasskeyContext(req);
+    const verification = await verifyAuthenticationResponse({
+      response: body.credential,
+      expectedChallenge: stored.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      credential: getCredentialForVerification(credentialRow),
+      requireUserVerification: true,
+    });
+    if (!verification.verified) return err("Passkey could not be verified", 401);
+    db.query(`UPDATE passkey_credentials SET counter = ?, last_used_at = datetime('now') WHERE id = ?`).run(
+      verification.authenticationInfo.newCounter,
+      credentialRow.id,
+    );
+    const user = db.query(`SELECT id, email, display_name, created_at FROM users WHERE id = ?`).get(credentialRow.user_id) as any;
+    if (!user) return err("Account not found", 401);
+    const token = createSession(user.id);
+    return json({ user, token, credentialId: credentialRow.id });
   }
 
   // ── User Hardware ─────────────────────────────────────────────────

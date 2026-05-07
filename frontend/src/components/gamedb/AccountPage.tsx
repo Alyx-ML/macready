@@ -80,6 +80,7 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
 
   const memberSince = new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const hardwareImage = `${import.meta.env.BASE_URL}imgs/account-hardware-mac.webp`;
+  const isTouchIdAccount = String(user.email || "").endsWith("@macready.local");
 
   return (
     <div className="py-8 animate-in">
@@ -94,7 +95,7 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
             </div>
             <div>
               <h2 className="text-[20px] font-semibold text-white tracking-tight">{user.display_name}</h2>
-              <p className="text-[12px] text-white">{user.email}</p>
+              <p className="text-[12px] text-white">{isTouchIdAccount ? "Signed in with Touch ID" : user.email}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-8 pt-5 sm:pt-0">

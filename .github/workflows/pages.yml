@@ -32,6 +32,9 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install root dependencies
+        run: bun install --frozen-lockfile
+
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
         working-directory: frontend
