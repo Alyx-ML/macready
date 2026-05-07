@@ -252,7 +252,7 @@ export function FloatingAgentChat({ mode = "dashboard", dashboardName = "__creat
 
   return (
     <div className="safe-inline safe-bottom-pad fixed bottom-0 left-0 right-0 z-50">
-      <div className="max-w-[860px] mx-auto px-4 sm:px-6 pb-4 relative transition-all duration-300 ease-out" style={{ height: isCollapsed ? 28 : 240 }}>
+      <div className="max-w-[860px] mx-auto px-3 sm:px-6 pb-3 sm:pb-4 relative transition-all duration-300 ease-out" style={{ height: isCollapsed ? 28 : "var(--agent-chat-expanded-height)" }}>
         {/* Collapsed bar */}
         <div className={`absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out ${isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <div className="relative h-7 w-full overflow-hidden rounded-t-lg border border-white/18 bg-[#080808]/92 shadow-[0_12px_32px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.16)]">
@@ -271,7 +271,7 @@ export function FloatingAgentChat({ mode = "dashboard", dashboardName = "__creat
 
         {/* Panel */}
         <div className={`absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <div className="relative h-[240px] overflow-hidden rounded-t-lg border border-white/14 bg-[#080808]/94 shadow-[0_18px_54px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.14)]">
+          <div className="relative h-[var(--agent-chat-expanded-height)] overflow-hidden rounded-t-lg border border-white/14 bg-[#080808]/94 shadow-[0_18px_54px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.14)]">
           <div className="relative z-10 flex h-full flex-col overflow-hidden">
             {/* Header */}
             <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-white/12">
@@ -352,6 +352,8 @@ export function FloatingAgentChat({ mode = "dashboard", dashboardName = "__creat
             <div className="shrink-0 border-t border-white/12 px-3 py-2">
               <div className="relative">
                 <textarea
+                  id="floating-agent-chat-input"
+                  name="floating-agent-chat-input"
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}

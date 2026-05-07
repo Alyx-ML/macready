@@ -16,6 +16,7 @@
   --mac-motion-standard: 220ms;
   --mac-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --mac-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --agent-chat-expanded-height: 240px;
 }
 
 @utility scrollbar-hide {
@@ -48,6 +49,8 @@ body {
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -57,6 +60,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+@supports (min-height: 100svh) {
+  body {
+    min-height: 100svh;
+  }
 }
 
 .tabular-nums {
@@ -101,6 +110,16 @@ body {
 
 .safe-bottom-pad {
   padding-bottom: var(--safe-bottom);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --agent-chat-expanded-height: min(44svh, 320px);
+  }
+
+  .content-visibility-auto {
+    contain-intrinsic-size: 1px 520px;
+  }
 }
 
 /* Skeleton loading */

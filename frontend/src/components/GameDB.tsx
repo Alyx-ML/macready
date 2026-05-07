@@ -912,9 +912,9 @@ function GameListView({
 
   return (
     <div className="animate-in">
-      <div className="relative z-30 flex justify-center mb-8 px-4">
-        <div className="relative w-full max-w-lg group h-11 flex items-center gap-3">
-          <div className="flex-1 relative isolate h-11 overflow-hidden rounded-full transition-all duration-300 min-w-0">
+      <div className="relative z-30 mb-6 flex justify-center px-3 sm:mb-8 sm:px-4">
+        <div className="group relative flex w-full max-w-lg flex-wrap items-center justify-center gap-2 sm:h-11 sm:flex-nowrap sm:gap-3">
+          <div className="relative isolate h-11 min-w-0 w-full flex-1 overflow-hidden rounded-full transition-all duration-300 sm:w-auto">
             <div
               className="pointer-events-none absolute inset-[0.5px] z-[2] rounded-full"
               style={{
@@ -960,10 +960,10 @@ function GameListView({
             )}
           </div>
 
-          <div className={`flex-none flex items-center gap-0.5 transition-all duration-300 ${
+          <div className={`flex w-full items-center justify-center gap-0.5 transition-all duration-300 sm:flex-none sm:justify-start ${
             openFilterMenu 
-              ? 'w-[166px] opacity-100 translate-x-0 pointer-events-auto' 
-              : 'opacity-0 w-0 translate-x-4 pointer-events-none group-hover:w-[166px] group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto'
+              ? 'opacity-100 translate-x-0 pointer-events-auto sm:w-[166px]' 
+              : 'opacity-100 translate-x-0 pointer-events-auto sm:w-0 sm:translate-x-4 sm:opacity-0 sm:pointer-events-none sm:group-hover:w-[166px] sm:group-hover:translate-x-0 sm:group-hover:opacity-100 sm:group-hover:pointer-events-auto'
           }`}>
             {filterButtons.map((btn) => (
               <div key={btn.id} className="relative" onClick={(e) => e.stopPropagation()}>
@@ -1006,7 +1006,7 @@ function GameListView({
       </div>
 
       {hasActiveFilters && (
-        <div className="flex items-center justify-center gap-2 mb-4 px-1">
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-2 px-4">
           <span className="text-[10px] text-white/20 uppercase tracking-wider">Filters:</span>
           {statusFilter && <FilterChip label={getTierConfig(statusFilter).label} onClear={() => setStatusFilter("")} />}
           {wineFilter && <FilterChip label={`Wine ${wineFilter}`} onClear={() => setWineFilter("")} />}
@@ -1029,12 +1029,12 @@ function GameListView({
             />
           </div>
           
-          <CardSilkField id="game-cards" className="left-1/2 w-screen -translate-x-1/2 rounded-none border-x-0 border-y-0 px-4 py-10 sm:px-6">
+          <CardSilkField id="game-cards" className="left-1/2 w-screen -translate-x-1/2 rounded-none border-x-0 border-y-0 px-3 py-8 sm:px-6 sm:py-10">
             <div className="relative z-10 mx-auto max-w-[1600px]">
               <ScrollShadow
                 ref={steamScrollerRef}
                 hideScrollBar
-                className="relative max-h-[min(620px,calc(100vh-220px))] overflow-y-auto pr-1"
+                className="relative max-h-[min(620px,calc(100svh-190px))] overflow-y-auto overscroll-contain pr-1 sm:max-h-[min(620px,calc(100vh-220px))]"
                 onScroll={(event) => {
                   const node = event.currentTarget;
                   onSteamScrollTopChange(node.scrollTop);
@@ -1245,7 +1245,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
       <div className="mx-auto max-w-[1420px]">
         <header className="flex justify-center pt-2 pb-7">
           <nav
-            className="flex w-full max-w-[900px] items-center justify-center gap-5 px-4 text-[14px] sm:gap-8"
+            className="scrollbar-hide flex w-full max-w-[900px] items-center justify-start gap-5 overflow-x-auto px-4 text-[14px] sm:justify-center sm:gap-8"
             aria-label="MacReady news categories"
           >
             {NEWS_CATEGORIES.map((category) => {
@@ -1730,6 +1730,8 @@ function AppStoreFeed({
               </svg>
             </span>
             <input
+              id="appstore-search"
+              name="appstore-search"
               value={appSearch}
               onChange={(event) => setAppSearch(event.target.value)}
               placeholder="Search apps"
@@ -2917,7 +2919,7 @@ function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail, hardware,
   }, []);
 
   const shouldVirtualize = Boolean(virtualScrollRef) && games.length > INITIAL_COMPATIBILITY_CARD_COUNT;
-  const columnCount = gridWidth >= 1280 ? 5 : gridWidth >= 1024 ? 4 : gridWidth >= 640 ? 3 : 2;
+  const columnCount = gridWidth >= 1280 ? 5 : gridWidth >= 1024 ? 4 : gridWidth >= 640 ? 3 : gridWidth >= 430 ? 2 : 1;
   const gap = 16;
   const cardWidth = gridWidth > 0 ? (gridWidth - gap * (columnCount - 1)) / columnCount : 320;
   const rowHeight = Math.max(112, Math.round(cardWidth * (215 / 460) + gap));
@@ -2943,7 +2945,7 @@ function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail, hardware,
           return (
             <div
               key={virtualRow.key}
-              className="absolute left-0 top-0 grid w-full grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+              className="absolute left-0 top-0 grid w-full grid-cols-1 gap-4 min-[430px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
               style={{ transform: `translateY(${virtualRow.start - scrollMargin}px)` }}
             >
               {rowGames.map((game, rowIndex) => (
@@ -2966,7 +2968,7 @@ function SteamGameGrid({ games, addingSteamId, onSelect, onOpenDetail, hardware,
   }
 
   return (
-    <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+    <div ref={gridRef} className="grid grid-cols-1 gap-4 min-[430px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {games.map((game, index) => (
         <SteamGameCard
           key={game.steam_app_id}
