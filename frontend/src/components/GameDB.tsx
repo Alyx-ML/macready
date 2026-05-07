@@ -378,7 +378,7 @@ export function GameDB({ routeView = "home", routeDetailId = null, routeAccount 
     const interval = window.setInterval(() => {
       setLockTime(formatLockTime());
       setLockDate(formatLockDate());
-    }, 1000);
+    }, 60_000);
 
     return () => window.clearInterval(interval);
   }, [isLocked]);
@@ -397,7 +397,6 @@ export function GameDB({ routeView = "home", routeDetailId = null, routeAccount 
   const [compatibilityVisibleSteamCount, setCompatibilityVisibleSteamCount] = useState(() => Math.max(INITIAL_COMPATIBILITY_CARD_COUNT, readSessionNumber(COMPATIBILITY_VISIBLE_COUNT_KEY, INITIAL_COMPATIBILITY_CARD_COUNT)));
   const compatibilityScrollTopRef = useRef(readSessionNumber(COMPATIBILITY_SCROLL_TOP_KEY, 0));
   const compatibilityScrollSaveTimer = useRef<number | null>(null);
-  const compatibilityImagePreloadCache = useRef<Set<string>>(new Set());
 
   const rememberCompatibilityScrollTop = useCallback((scrollTop: number) => {
     compatibilityScrollTopRef.current = scrollTop;
@@ -483,22 +482,6 @@ export function GameDB({ routeView = "home", routeDetailId = null, routeAccount 
     if (trendingSteam.length === 0 || isStaticDataMode) return;
     writeSessionJSON("macready:compatibility:steam-trending", trendingSteam);
   }, [trendingSteam]);
-
-  useEffect(() => {
-    if (mainView !== "compatibility" || trendingSteam.length === 0) return;
-    const urls = trendingSteam
-      .map((item) => item.steam_app_id ? steamHeaderImageUrl(item.steam_app_id) : item.cover_art_url)
-      .filter((url): url is string => Boolean(url))
-      .slice(0, 24);
-
-    urls.forEach((url) => {
-      if (compatibilityImagePreloadCache.current.has(url)) return;
-      compatibilityImagePreloadCache.current.add(url);
-      const image = new Image();
-      image.decoding = "async";
-      image.src = url;
-    });
-  }, [mainView, trendingSteam]);
 
   useEffect(() => {
     if (!search.trim()) { setSteamResults([]); return; }
@@ -1758,84 +1741,97 @@ function AppStoreFeed({
             <p className="mt-2 text-[13px] text-white/38">Try another app name or developer.</p>
           </div>
         ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {leadApps.map((article) => (
-            <button
-              key={article.id}
-              type="button"
-              onClick={() => onOpenArticle(article)}
-              className="group grid grid-cols-[58px_minmax(0,1fr)] items-center gap-3 rounded-[18px] bg-white/[0.018] px-3 py-3 text-left ring-1 ring-white/[0.045] transition-colors hover:bg-white/[0.035]"
+          <div className="relative">
+            <div
+              className="release-notes-scroll max-h-[min(580px,calc(100vh-360px))] overflow-y-auto pr-1 md:max-h-[min(620px,calc(100vh-330px))]"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                overscrollBehavior: "contain",
+                scrollbarGutter: "stable",
+              }}
             >
-              {article.image_url && (
-                <img
-                  src={getSizedImageUrl(article.image_url, 128)}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  width={128}
-                  height={128}
-                  className="size-[58px] rounded-[14px] object-cover shadow-[0_10px_26px_rgba(0,0,0,0.34)]"
-                />
-              )}
-              <span className="min-w-0">
-                <span className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-white/28">
-                  {getAppStoreRank(article) && <span>#{getAppStoreRank(article)}</span>}
-                  <span>{getAppStoreChart(article)}</span>
-                </span>
-                <span className="mt-1 block truncate text-[16px] font-medium text-white/84 group-hover:text-white">
-                  {getAppStoreName(article)}
-                </span>
-                <span className="mt-1 block truncate text-[12px] text-white/38">
-                  {article.summary}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-        )}
-
-        {remainingApps.length > 0 && !isSearchingApps && (
-          <div className="content-visibility-auto mt-10">
-            <p className="mb-5 text-[10px] uppercase tracking-[0.24em] text-white/24">{appSearchQuery ? "More results" : "More from the charts"}</p>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(132px,1fr))] gap-x-4 gap-y-7 xl:grid-cols-6">
-              {remainingApps.map((article) => {
-                const maker = getMaker(article);
-
-                return (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {leadApps.map((article) => (
                   <button
                     key={article.id}
                     type="button"
                     onClick={() => onOpenArticle(article)}
-                    className="group min-w-0 text-left"
+                    className="group grid grid-cols-[58px_minmax(0,1fr)] items-center gap-3 rounded-[18px] bg-white/[0.018] px-3 py-3 text-left ring-1 ring-white/[0.045] transition-colors hover:bg-white/[0.035]"
                   >
-                    <span className="flex min-w-0 items-center gap-3">
-                      {article.image_url && (
-                        <img
-                          src={getSizedImageUrl(article.image_url, 96)}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          className="size-11 rounded-[11px] object-cover opacity-90 shadow-[0_10px_20px_rgba(0,0,0,0.28)] transition-[opacity,transform] duration-200 ease-out group-hover:scale-[1.03] group-hover:opacity-100 xl:size-12 xl:rounded-[12px]"
-                        />
-                      )}
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[15px] font-medium leading-tight text-white/78 transition-colors group-hover:text-white">
-                          {getAppStoreName(article)}
-                        </span>
-                        <span className="mt-1.5 block truncate text-[10px] uppercase tracking-[0.18em] text-white/25">
-                          {getMetaLine(article)}
-                        </span>
-                        {maker && (
-                          <span className="mt-1 hidden truncate text-[11px] text-white/32 2xl:block">
-                            {maker}
-                          </span>
-                        )}
+                    {article.image_url && (
+                      <img
+                        src={getSizedImageUrl(article.image_url, 128)}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        width={128}
+                        height={128}
+                        className="size-[58px] rounded-[14px] object-cover shadow-[0_10px_26px_rgba(0,0,0,0.34)]"
+                      />
+                    )}
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-white/28">
+                        {getAppStoreRank(article) && <span>#{getAppStoreRank(article)}</span>}
+                        <span>{getAppStoreChart(article)}</span>
+                      </span>
+                      <span className="mt-1 block truncate text-[16px] font-medium text-white/84 group-hover:text-white">
+                        {getAppStoreName(article)}
+                      </span>
+                      <span className="mt-1 block truncate text-[12px] text-white/38">
+                        {article.summary}
                       </span>
                     </span>
                   </button>
-                );
-              })}
+                ))}
+              </div>
+
+              {remainingApps.length > 0 && !isSearchingApps && (
+                <div className="mt-10 pb-3">
+                  <p className="mb-5 text-[10px] uppercase tracking-[0.24em] text-white/24">{appSearchQuery ? "More results" : "More from the charts"}</p>
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(132px,1fr))] gap-x-4 gap-y-7 xl:grid-cols-6">
+                    {remainingApps.map((article) => {
+                      const maker = getMaker(article);
+
+                      return (
+                        <button
+                          key={article.id}
+                          type="button"
+                          onClick={() => onOpenArticle(article)}
+                          className="group min-w-0 text-left"
+                        >
+                          <span className="flex min-w-0 items-center gap-3">
+                            {article.image_url && (
+                              <img
+                                src={getSizedImageUrl(article.image_url, 96)}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                className="size-11 rounded-[11px] object-cover opacity-90 shadow-[0_10px_20px_rgba(0,0,0,0.28)] transition-[opacity,transform] duration-200 ease-out group-hover:scale-[1.03] group-hover:opacity-100 xl:size-12 xl:rounded-[12px]"
+                              />
+                            )}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[15px] font-medium leading-tight text-white/78 transition-colors group-hover:text-white">
+                                {getAppStoreName(article)}
+                              </span>
+                              <span className="mt-1.5 block truncate text-[10px] uppercase tracking-[0.18em] text-white/25">
+                                {getMetaLine(article)}
+                              </span>
+                              {maker && (
+                                <span className="mt-1 hidden truncate text-[11px] text-white/32 2xl:block">
+                                  {maker}
+                                </span>
+                              )}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-black via-black/65 to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black via-black/70 to-transparent" />
           </div>
         )}
       </div>
