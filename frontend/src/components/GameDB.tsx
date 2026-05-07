@@ -1242,10 +1242,10 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
 
   return (
     <main id="macready-news" className="animate-in min-h-[1580px] pb-16">
-      <div className="mx-auto max-w-[1420px]">
+      <div className="mx-auto max-w-[1420px] px-4 sm:px-6">
         <header className="flex justify-center pt-2 pb-7">
           <nav
-            className="scrollbar-hide flex w-full max-w-[900px] items-center justify-start gap-5 overflow-x-auto px-4 text-[14px] sm:justify-center sm:gap-8"
+            className="flex w-full max-w-[900px] flex-wrap items-center justify-center gap-x-5 gap-y-3 text-[14px] sm:gap-x-8"
             aria-label="MacReady news categories"
           >
             {NEWS_CATEGORIES.map((category) => {
@@ -1358,7 +1358,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                     <p className="text-[10px] uppercase tracking-[0.24em] text-white/55">
                       {NEWS_CATEGORY_LABELS[leadArticle.category]} · {leadArticle.source} {formatDate(leadArticle.published_at) && `· ${formatDate(leadArticle.published_at)}`}
                     </p>
-                    <h2 className="mt-3 max-w-[680px] text-[31px] font-semibold leading-[1.05] tracking-tight text-white md:text-[42px]">
+                    <h2 className="mt-3 max-w-[680px] text-[27px] font-semibold leading-[1.08] tracking-tight text-white sm:text-[31px] md:text-[42px]">
                       {leadArticle.title}
                     </h2>
                     {leadArticle.summary && (
