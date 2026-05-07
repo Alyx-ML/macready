@@ -1371,7 +1371,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                 </button>
               )}
 
-              <aside className="pt-1">
+              <aside className="hidden pt-1 xl:block">
                 <div className="mb-4 flex items-center justify-between">
                   <p className="text-[10px] uppercase tracking-[0.24em] text-white/55">Top stories</p>
                 </div>
@@ -1459,7 +1459,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
               </div>
 
               {activeCategory === "News" && (
-                <aside className="space-y-7 pt-9 xl:pt-[48px]">
+                <aside className="hidden space-y-7 pt-9 xl:block xl:pt-[48px]">
                   <section>
                     <h2 className="text-[15px] font-semibold text-white/92">Latest</h2>
                     <div className="mt-4 space-y-4">
