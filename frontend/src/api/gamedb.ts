@@ -66,6 +66,15 @@ function rememberTouchIdCredential(id?: string) {
   localStorage.setItem(TOUCH_ID_CREDENTIALS_KEY, JSON.stringify(Array.from(ids)));
 }
 
+function forgetTouchIdCredential(id: string) {
+  const ids = readTouchIdCredentialIds().filter((savedId) => savedId !== id);
+  if (ids.length > 0) {
+    localStorage.setItem(TOUCH_ID_CREDENTIALS_KEY, JSON.stringify(ids));
+  } else {
+    localStorage.removeItem(TOUCH_ID_CREDENTIALS_KEY);
+  }
+}
+
 export function hasSavedTouchIdCredential(): boolean {
   return readTouchIdCredentialIds().length > 0;
 }
@@ -484,6 +493,19 @@ export async function verifyPasskeyLogin(credential: any, requestId: string): Pr
   });
   localStorage.setItem("macgamedb_token", data.token);
   rememberTouchIdCredential(data.credentialId);
+  return data;
+}
+
+export async function deleteTouchIdPasskey(): Promise<{ success: boolean; removedCredentialIds: string[] }> {
+  const credentialIds = readTouchIdCredentialIds();
+  const data = await fetchJSON<{ success: boolean; removedCredentialIds: string[] }>(`${BASE}/auth/passkeys/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credentialIds }),
+  });
+  for (const credentialId of data.removedCredentialIds) {
+    forgetTouchIdCredential(credentialId);
+  }
   return data;
 }
 

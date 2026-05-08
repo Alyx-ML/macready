@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import {
+  deleteTouchIdPasskey,
   register,
   login,
   getMe,
@@ -78,6 +79,15 @@ export function AuthModal({ onClose, onLoggedIn, user: initialUser }: { onClose:
                 return;
               }
               setError(e.message || "Touch ID setup failed");
+            }
+          }}
+          onRemovePasskey={async () => {
+            setError("");
+            if (!window.confirm("Remove the Touch ID passkey saved on this Mac?")) return;
+            try {
+              await deleteTouchIdPasskey();
+            } catch (e: any) {
+              setError(e.message || "Touch ID passkey removal failed");
             }
           }}
           error={error}
@@ -160,7 +170,7 @@ export function AuthModal({ onClose, onLoggedIn, user: initialUser }: { onClose:
   );
 }
 
-function AccountView({ user, onAddPasskey, onLogout, error }: { user: any; onAddPasskey: () => void; onLogout: () => void; error: string }) {
+function AccountView({ user, onAddPasskey, onRemovePasskey, onLogout, error }: { user: any; onAddPasskey: () => void; onRemovePasskey: () => void; onLogout: () => void; error: string }) {
   return (
     <div className="space-y-6">
       <div>
@@ -190,6 +200,13 @@ function AccountView({ user, onAddPasskey, onLogout, error }: { user: any; onAdd
       >
         <PasskeyIcon />
         Add Passkey
+      </button>
+
+      <button
+        onClick={onRemovePasskey}
+        className="w-full py-2.5 rounded-lg border border-white/15 bg-white/[0.04] text-white/70 text-[13px] font-medium hover:border-red-400/35 hover:text-red-300 transition-colors"
+      >
+        Remove Touch ID passkey
       </button>
 
       <button 

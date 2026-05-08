@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { deleteHardware, getMe, saveHardware, logout } from "../../api/gamedb";
+import { deleteHardware, deleteTouchIdPasskey, getMe, saveHardware, logout } from "../../api/gamedb";
 import type { User, UserHardware } from "../../types/gamedb";
 
 export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout: () => void }) {
@@ -12,6 +12,7 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
   const [ram, setRam] = useState("");
   const [gpuCores, setGpuCores] = useState("");
   const [macosVer, setMacosVer] = useState("");
+  const [passkeyMessage, setPasskeyMessage] = useState("");
 
   useEffect(() => {
     getMe().then((data) => {
@@ -49,6 +50,17 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
   const handleLogout = async () => {
     await logout();
     onLogout();
+  };
+
+  const handleRemovePasskey = async () => {
+    setPasskeyMessage("");
+    if (!window.confirm("Remove the Touch ID passkey saved on this Mac?")) return;
+    try {
+      await deleteTouchIdPasskey();
+      setPasskeyMessage("Touch ID passkey removed from this Mac.");
+    } catch (error: any) {
+      setPasskeyMessage(error.message || "Touch ID passkey removal failed.");
+    }
   };
 
   if (loading) {
@@ -96,13 +108,24 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
             <div>
               <h2 className="text-[20px] font-semibold text-white tracking-tight">{user.display_name}</h2>
               <p className="text-[12px] text-white">{isTouchIdAccount ? "Signed in with Touch ID" : user.email}</p>
+              <button
+                onClick={handleRemovePasskey}
+                className="mt-3 rounded-lg border border-white/14 px-3 py-1.5 text-[12px] font-medium text-white/55 transition-all hover:border-red-400/35 hover:text-red-300"
+              >
+                Remove Touch ID passkey
+              </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-8 pt-5 sm:pt-0">
-            <ProfileMetric label="Member since" value={memberSince} />
-            <ProfileMetric label="Machines" value={String(hardware.length)} />
+          <div className="flex flex-col gap-4 pt-5 sm:items-end sm:pt-0">
+            <div className="grid grid-cols-2 gap-8">
+              <ProfileMetric label="Member since" value={memberSince} />
+              <ProfileMetric label="Machines" value={String(hardware.length)} />
+            </div>
           </div>
         </div>
+        {passkeyMessage && (
+          <p className="mt-5 text-[12px] text-white/65">{passkeyMessage}</p>
+        )}
       </section>
 
       {/* Hardware Profiles */}

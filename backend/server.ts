@@ -1101,6 +1101,36 @@ export async function handler(req: Request): Promise<Response> {
     return json({ user, token, credentialId: credentialRow.id });
   }
 
+  if (method === "POST" && path === "/api/v1/gamedb/auth/passkeys/delete") {
+    const user = getSessionUser(req);
+    if (!user) return err("Not authenticated", 401);
+    const body = await req.json().catch(() => ({})) as { credentialIds?: string[] };
+    const requestedIds = Array.isArray(body.credentialIds)
+      ? Array.from(new Set(body.credentialIds.filter((id) => typeof id === "string" && id.length > 0)))
+      : [];
+    if (requestedIds.length === 0) return err("No Touch ID passkey saved on this Mac", 400);
+
+    const passkeys = db.query(`SELECT id FROM passkey_credentials WHERE user_id = ?`).all(user.id) as { id: string }[];
+    const ownedIds = new Set(passkeys.map((credential) => credential.id));
+    const idsToRemove = requestedIds.filter((id) => ownedIds.has(id));
+    if (idsToRemove.length === 0) return err("No matching Touch ID passkey found for this account", 404);
+
+    const userRow = db.query(`SELECT email, password_hash FROM users WHERE id = ?`).get(user.id) as { email?: string; password_hash?: string } | undefined;
+    const isPasskeyOnlyAccount = String(userRow?.email || "").endsWith("@macready.local")
+      && String(userRow?.password_hash || "").startsWith("passkey-only:");
+    if (isPasskeyOnlyAccount && idsToRemove.length >= passkeys.length) {
+      return err("Add an email and password before removing your last Touch ID passkey", 409);
+    }
+
+    const deleteCredential = db.query(`DELETE FROM passkey_credentials WHERE user_id = ? AND id = ?`);
+    db.transaction(() => {
+      for (const credentialId of idsToRemove) {
+        deleteCredential.run(user.id, credentialId);
+      }
+    })();
+    return json({ success: true, removedCredentialIds: idsToRemove });
+  }
+
   // ── User Hardware ─────────────────────────────────────────────────
   if (method === "POST" && path === "/api/v1/gamedb/users/hardware") {
     const user = getSessionUser(req);
