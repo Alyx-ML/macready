@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { deleteHardware, deleteTouchIdPasskey, getMe, saveHardware, logout } from "../../api/gamedb";
+import { deleteHardware, deleteTouchIdPasskey, getMe, saveHardware, logout, updateProfile } from "../../api/gamedb";
 import type { User, UserHardware } from "../../types/gamedb";
 
-export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout: () => void }) {
+export function AccountPage({ onBack, onLogout, onSessionCleared }: { onBack: () => void; onLogout: () => void; onSessionCleared?: () => void }) {
   const [user, setUser] = useState<User | null>(null);
   const [hardware, setHardware] = useState<UserHardware[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,12 +13,17 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
   const [gpuCores, setGpuCores] = useState("");
   const [macosVer, setMacosVer] = useState("");
   const [passkeyMessage, setPasskeyMessage] = useState("");
+  const [signedOutAfterRemoval, setSignedOutAfterRemoval] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [profileMessage, setProfileMessage] = useState("");
 
   useEffect(() => {
     getMe().then((data) => {
       if (data) {
         setUser(data.user);
         setHardware(data.hardware);
+        setDisplayName(data.user.display_name);
       }
       setLoading(false);
     });
@@ -54,12 +59,28 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
 
   const handleRemovePasskey = async () => {
     setPasskeyMessage("");
-    if (!window.confirm("Remove the Touch ID passkey saved on this Mac?")) return;
+    if (!window.confirm("Removing Touch ID will sign you out of this account.")) return;
     try {
       await deleteTouchIdPasskey();
-      setPasskeyMessage("Touch ID passkey removed from this Mac.");
+      await logout();
+      setUser(null);
+      setSignedOutAfterRemoval(true);
+      onSessionCleared?.();
     } catch (error: any) {
       setPasskeyMessage(error.message || "Touch ID passkey removal failed.");
+    }
+  };
+
+  const handleSaveDisplayName = async () => {
+    setProfileMessage("");
+    try {
+      const data = await updateProfile(displayName);
+      setUser(data.user);
+      setDisplayName(data.user.display_name);
+      setIsEditingName(false);
+      setProfileMessage("Display name updated.");
+    } catch (error: any) {
+      setProfileMessage(error.message || "Display name update failed.");
     }
   };
 
@@ -71,6 +92,16 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
           <div className="skeleton h-20 w-full rounded-xl" />
           <div className="skeleton h-48 w-full rounded-xl" />
         </div>
+      </div>
+    );
+  }
+
+  if (signedOutAfterRemoval) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-white text-[15px]">Touch ID removed.</p>
+        <p className="mt-2 text-white/50 text-[13px]">You have been signed out of this account.</p>
+        <button onClick={onBack} className="mt-5 text-[13px] text-white/50 hover:text-white transition-colors">← Back to games</button>
       </div>
     );
   }
@@ -88,7 +119,19 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
   const labelCls = "block text-[11px] text-white mb-1.5 uppercase tracking-wider";
 
   const chipOptions = ["M1","M1 Pro","M1 Max","M1 Ultra","M2","M2 Pro","M2 Max","M2 Ultra","M3","M3 Pro","M3 Max","M4","M4 Pro","M4 Max","M5","M5 Pro","M5 Max"];
+  const macModelOptions = [
+    "MacBook Air 13-inch",
+    "MacBook Air 15-inch",
+    "MacBook Pro 14-inch",
+    "MacBook Pro 16-inch",
+    "iMac 24-inch",
+    "Mac mini",
+    "Mac Studio",
+    "Mac Pro",
+  ];
   const ramOptions = ["8","16","18","24","32","36","48","64","96","128","192"];
+  const gpuCoreOptions = ["7","8","10","14","16","18","19","20","24","30","32","38","40","48","60","64","76"];
+  const macosOptions = ["macOS Tahoe 26.5","macOS Tahoe 26.4","macOS Tahoe 26.3","macOS Tahoe 26.2","macOS Tahoe 26.1","macOS Tahoe 26.0","macOS Sequoia 15.5","macOS Sequoia 15.4","macOS Sequoia 15.3","macOS Sequoia 15.2","macOS Sequoia 15.1","macOS Sequoia 15.0"];
 
   const memberSince = new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const hardwareImage = `${import.meta.env.BASE_URL}imgs/account-hardware-mac.webp`;
@@ -106,13 +149,43 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
               <img src={`${import.meta.env.BASE_URL}imgs/ChatGPT Image May 4, 2026, 06_01_12 AM.webp`} alt="" className="h-full w-full object-cover" />
             </div>
             <div>
-              <h2 className="text-[20px] font-semibold text-white tracking-tight">{user.display_name}</h2>
+              {isEditingName ? (
+                <div className="flex max-w-[320px] flex-col gap-2 sm:flex-row">
+                  <input
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    className="min-w-0 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-1.5 text-[13px] text-white outline-none transition-colors focus:border-white/40"
+                    maxLength={40}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveDisplayName}
+                    disabled={displayName.trim().length < 2}
+                    className="rounded-lg border border-white/15 px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:border-white/35 disabled:opacity-45"
+                  >
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-[20px] font-semibold text-white tracking-tight">{user.display_name}</h2>
+                  <button
+                    onClick={() => {
+                      setProfileMessage("");
+                      setIsEditingName(true);
+                    }}
+                    className="rounded-lg border border-white/10 px-2 py-1 text-[11px] text-white/50 transition-colors hover:border-white/25 hover:text-white"
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
               <p className="text-[12px] text-white">{isTouchIdAccount ? "Signed in with Touch ID" : user.email}</p>
               <button
                 onClick={handleRemovePasskey}
                 className="mt-3 rounded-lg border border-white/14 px-3 py-1.5 text-[12px] font-medium text-white/55 transition-all hover:border-red-400/35 hover:text-red-300"
               >
-                Remove Touch ID passkey
+                Remove Touch ID
               </button>
             </div>
           </div>
@@ -125,6 +198,9 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
         </div>
         {passkeyMessage && (
           <p className="mt-5 text-[12px] text-white/65">{passkeyMessage}</p>
+        )}
+        {profileMessage && (
+          <p className="mt-3 text-[12px] text-white/65">{profileMessage}</p>
         )}
       </section>
 
@@ -223,7 +299,10 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
               </div>
               <div>
                 <label className={labelCls}>Mac Model</label>
-                <input value={macModel} onChange={(e) => setMacModel(e.target.value)} placeholder="e.g. MacBook Pro 16″" className={inputCls} />
+                <select value={macModel} onChange={(e) => setMacModel(e.target.value)} className={inputCls}>
+                  <option value="">Select model</option>
+                  {macModelOptions.map(model => <option key={model} value={model}>{model}</option>)}
+                </select>
               </div>
               <div>
                 <label className={labelCls}>Memory</label>
@@ -234,11 +313,17 @@ export function AccountPage({ onBack, onLogout }: { onBack: () => void; onLogout
               </div>
               <div>
                 <label className={labelCls}>macOS Version</label>
-                <input value={macosVer} onChange={(e) => setMacosVer(e.target.value)} placeholder="e.g. 15.4" className={inputCls} />
+                <select value={macosVer} onChange={(e) => setMacosVer(e.target.value)} className={inputCls}>
+                  <option value="">Select macOS</option>
+                  {macosOptions.map(version => <option key={version} value={version}>{version}</option>)}
+                </select>
               </div>
               <div>
                 <label className={labelCls}>GPU Cores</label>
-                <input value={gpuCores} onChange={(e) => setGpuCores(e.target.value)} placeholder="e.g. 30" className={inputCls} />
+                <select value={gpuCores} onChange={(e) => setGpuCores(e.target.value)} className={inputCls}>
+                  <option value="">Select cores</option>
+                  {gpuCoreOptions.map(cores => <option key={cores} value={cores}>{cores}-core</option>)}
+                </select>
               </div>
             </div>
             <div className="flex items-center gap-3 mt-4">

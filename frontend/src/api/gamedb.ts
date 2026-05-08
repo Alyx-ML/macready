@@ -509,6 +509,14 @@ export async function deleteTouchIdPasskey(): Promise<{ success: boolean; remove
   return data;
 }
 
+export async function updateProfile(display_name: string): Promise<{ user: User }> {
+  return fetchJSON<{ user: User }>(`${BASE}/auth/profile`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ display_name }),
+  });
+}
+
 export async function logout(): Promise<void> {
   await fetchJSON(`${BASE}/auth/logout`, { method: "POST" });
   localStorage.removeItem("macgamedb_token");

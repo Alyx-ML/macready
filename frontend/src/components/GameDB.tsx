@@ -568,6 +568,7 @@ export function GameDB({ routeView = "home", routeDetailId = null, routeAccount 
             {showAccountPage ? (
               <AccountPage
                 onBack={() => runPageCrossfade(() => setShowAccountPage(false), goHome)}
+                onSessionCleared={() => setUser(null)}
                 onLogout={() => {
                   setUser(null);
                   runPageCrossfade(() => setShowAccountPage(false), goHome);

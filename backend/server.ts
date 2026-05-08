@@ -917,6 +917,19 @@ export async function handler(req: Request): Promise<Response> {
     return json({ user, hardware });
   }
 
+  if (method === "PUT" && path === "/api/v1/gamedb/auth/profile") {
+    const user = getSessionUser(req);
+    if (!user) return err("Not authenticated", 401);
+    const body = await req.json().catch(() => ({})) as { display_name?: string };
+    const displayName = String(body.display_name || "").trim();
+    if (displayName.length < 2 || displayName.length > 40) {
+      return err("Display name must be 2-40 characters", 400);
+    }
+    db.query(`UPDATE users SET display_name = ? WHERE id = ?`).run(displayName, user.id);
+    const updated = db.query(`SELECT id, email, display_name, created_at FROM users WHERE id = ?`).get(user.id);
+    return json({ user: updated });
+  }
+
   // ── AUTH: Logout ──────────────────────────────────────────────────
   if (method === "POST" && path === "/api/v1/gamedb/auth/logout") {
     const authHeader = req.headers.get("Authorization");
@@ -1114,13 +1127,6 @@ export async function handler(req: Request): Promise<Response> {
     const ownedIds = new Set(passkeys.map((credential) => credential.id));
     const idsToRemove = requestedIds.filter((id) => ownedIds.has(id));
     if (idsToRemove.length === 0) return err("No matching Touch ID passkey found for this account", 404);
-
-    const userRow = db.query(`SELECT email, password_hash FROM users WHERE id = ?`).get(user.id) as { email?: string; password_hash?: string } | undefined;
-    const isPasskeyOnlyAccount = String(userRow?.email || "").endsWith("@macready.local")
-      && String(userRow?.password_hash || "").startsWith("passkey-only:");
-    if (isPasskeyOnlyAccount && idsToRemove.length >= passkeys.length) {
-      return err("Add an email and password before removing your last Touch ID passkey", 409);
-    }
 
     const deleteCredential = db.query(`DELETE FROM passkey_credentials WHERE user_id = ? AND id = ?`);
     db.transaction(() => {

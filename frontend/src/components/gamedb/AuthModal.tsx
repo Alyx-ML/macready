@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   deleteTouchIdPasskey,
+  updateProfile,
   register,
   login,
   getMe,
@@ -14,7 +15,7 @@ import {
   verifyPasskeySignup,
 } from "../../api/gamedb";
 
-type AuthView = "login" | "register" | "account";
+type AuthView = "login" | "register" | "account" | "signedout";
 
 async function loadPasskeyBrowser() {
   return import("@simplewebauthn/browser");
@@ -83,11 +84,26 @@ export function AuthModal({ onClose, onLoggedIn, user: initialUser }: { onClose:
           }}
           onRemovePasskey={async () => {
             setError("");
-            if (!window.confirm("Remove the Touch ID passkey saved on this Mac?")) return;
+            if (!window.confirm("Removing Touch ID will sign you out of this account.")) return;
             try {
               await deleteTouchIdPasskey();
+              await logout();
+              onLoggedIn(null);
+              setUser(null);
+              setView("signedout");
             } catch (e: any) {
               setError(e.message || "Touch ID passkey removal failed");
+            }
+          }}
+          onUpdateDisplayName={async (displayName) => {
+            setError("");
+            try {
+              const data = await updateProfile(displayName);
+              setUser(data.user);
+              onLoggedIn(data.user);
+            } catch (e: any) {
+              setError(e.message || "Display name update failed");
+              throw e;
             }
           }}
           error={error}
@@ -166,11 +182,47 @@ export function AuthModal({ onClose, onLoggedIn, user: initialUser }: { onClose:
           onSwitch={() => { setError(""); setView("login"); }}
         />
       )}
+      {view === "signedout" && (
+        <SignedOutView
+          onClose={onClose}
+          onSignIn={() => {
+            setError("");
+            setView("login");
+          }}
+        />
+      )}
     </ModalShell>
   );
 }
 
-function AccountView({ user, onAddPasskey, onRemovePasskey, onLogout, error }: { user: any; onAddPasskey: () => void; onRemovePasskey: () => void; onLogout: () => void; error: string }) {
+function AccountView({
+  user,
+  onAddPasskey,
+  onRemovePasskey,
+  onUpdateDisplayName,
+  onLogout,
+  error,
+}: {
+  user: any;
+  onAddPasskey: () => void;
+  onRemovePasskey: () => void;
+  onUpdateDisplayName: (displayName: string) => Promise<void>;
+  onLogout: () => void;
+  error: string;
+}) {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [displayName, setDisplayName] = useState(user.display_name || "");
+  const [message, setMessage] = useState("");
+  const canSaveName = displayName.trim().length >= 2 && displayName.trim().length <= 40;
+
+  const saveDisplayName = async () => {
+    if (!canSaveName) return;
+    setMessage("");
+    await onUpdateDisplayName(displayName.trim());
+    setIsEditingName(false);
+    setMessage("Display name updated.");
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -185,14 +237,45 @@ function AccountView({ user, onAddPasskey, onRemovePasskey, onLogout, error }: {
           <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-medium">
             {user.display_name?.[0]?.toUpperCase()}
           </div>
-          <div>
-            <p className="text-[14px] text-white font-medium">{user.display_name}</p>
+          <div className="min-w-0 flex-1">
+            {isEditingName ? (
+              <div className="flex gap-2">
+                <input
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  className="min-w-0 flex-1 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-1.5 text-[13px] text-white outline-none transition-colors focus:border-white/40"
+                  maxLength={40}
+                  autoFocus
+                />
+                <button
+                  onClick={saveDisplayName}
+                  disabled={!canSaveName}
+                  className="rounded-lg border border-white/15 px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:border-white/35 disabled:opacity-45"
+                >
+                  Save
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="truncate text-[14px] text-white font-medium">{user.display_name}</p>
+                <button
+                  onClick={() => {
+                    setMessage("");
+                    setIsEditingName(true);
+                  }}
+                  className="rounded-md border border-white/10 px-2 py-0.5 text-[11px] text-white/50 transition-colors hover:border-white/25 hover:text-white"
+                >
+                  Edit
+                </button>
+              </div>
+            )}
             <p className="text-[12px] text-white/40">Member since {new Date().getFullYear()}</p>
           </div>
         </div>
       </div>
 
       {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {message && <p className="text-[11px] text-white/55">{message}</p>}
 
       <button
         onClick={onAddPasskey}
@@ -206,7 +289,7 @@ function AccountView({ user, onAddPasskey, onRemovePasskey, onLogout, error }: {
         onClick={onRemovePasskey}
         className="w-full py-2.5 rounded-lg border border-white/15 bg-white/[0.04] text-white/70 text-[13px] font-medium hover:border-red-400/35 hover:text-red-300 transition-colors"
       >
-        Remove Touch ID passkey
+        Remove Touch ID
       </button>
 
       <button 
@@ -215,6 +298,25 @@ function AccountView({ user, onAddPasskey, onRemovePasskey, onLogout, error }: {
       >
         Sign out
       </button>
+    </div>
+  );
+}
+
+function SignedOutView({ onClose, onSignIn }: { onClose: () => void; onSignIn: () => void }) {
+  return (
+    <div className="space-y-5 py-2 text-center">
+      <div>
+        <h2 className="text-[17px] font-normal text-white tracking-tight">Touch ID removed</h2>
+        <p className="mt-2 text-[13px] text-white/55">You have been signed out of this account.</p>
+      </div>
+      <div className="flex flex-col gap-2">
+        <button onClick={onSignIn} className="w-full py-2.5 rounded-lg bg-white text-black text-[13px] font-medium hover:bg-white/90 transition-colors">
+          Sign in
+        </button>
+        <button onClick={onClose} className="w-full py-2.5 rounded-lg border border-white/15 bg-white/[0.04] text-white/70 text-[13px] font-medium hover:border-white/30 hover:text-white transition-colors">
+          Done
+        </button>
+      </div>
     </div>
   );
 }
