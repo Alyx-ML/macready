@@ -124,6 +124,7 @@ export function AccountPage({ onBack, onLogout, onSessionCleared }: { onBack: ()
     "MacBook Air 15-inch",
     "MacBook Pro 14-inch",
     "MacBook Pro 16-inch",
+    "Mac Neo",
     "iMac 24-inch",
     "Mac mini",
     "Mac Studio",

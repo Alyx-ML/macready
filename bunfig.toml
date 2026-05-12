@@ -1,0 +1,6 @@
+[install]
+# Only install npm package versions that have been public for at least 3 days.
+minimumReleaseAge = 259200
+
+# Local workspace packages are not registry packages and should not be age-gated.
+minimumReleaseAgeExcludes = ["macgamedb", "frontend", "backend"]

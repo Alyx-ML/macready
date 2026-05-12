@@ -177,7 +177,7 @@ export interface Test {
   gptk_version?: string;
   launcher?: string;
   play_method?: "Native" | "CrossOver" | "Parallels" | "GPTK";
-  translation_layer?: "D3DMetal" | "DXVK" | "None";
+  translation_layer?: "D3DMetal" | "DXVK" | "DXMT" | "None";
   graphics_preset?: string;
   resolution?: string;
   status: CompatTier;
@@ -257,7 +257,7 @@ export interface AddTestRequest {
   gptk_version?: string;
   launcher?: string;
   play_method?: "Native" | "CrossOver" | "Parallels" | "GPTK";
-  translation_layer?: "D3DMetal" | "DXVK" | "None";
+  translation_layer?: "D3DMetal" | "DXVK" | "DXMT" | "None";
   graphics_preset?: string;
   resolution?: string;
   status: CompatTier;

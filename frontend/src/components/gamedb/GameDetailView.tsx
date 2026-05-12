@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Apple, BadgeDollarSign, Cloud, Gamepad2, HeartHandshake, MessageSquareText, MonitorCheck, Pause, Play, ShieldCheck, TrendingUp, UsersRound, Volume1, Volume2, VolumeX, type LucideIcon } from "lucide-react";
@@ -276,7 +276,11 @@ export function GameDetailView({ gameId, onBack, onAddTest, primaryHardware }: {
 
       {showTestForm && (
         <div className="border border-[#2a2a2a] rounded-lg p-4 mb-4 bg-[#0d0d0d]">
-          <AddTestForm onSubmit={(req) => addTestMut.mutate(req, { onSuccess: () => setShowTestForm(false) })} />
+          <AddTestForm
+            isSubmitting={addTestMut.isPending}
+            errorMessage={addTestMut.error instanceof Error ? addTestMut.error.message : ""}
+            onSubmit={(req) => addTestMut.mutate(req, { onSuccess: () => setShowTestForm(false) })}
+          />
         </div>
       )}
 
@@ -879,7 +883,15 @@ function IssueRow({ issue }: { issue: Issue }) {
   );
 }
 
-function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) {
+function AddTestForm({
+  onSubmit,
+  isSubmitting,
+  errorMessage,
+}: {
+  onSubmit: (req: AddTestRequest) => void;
+  isSubmitting: boolean;
+  errorMessage?: string;
+}) {
   const [status, setStatus] = useState<CompatTier>("playable");
   const [playMethod, setPlayMethod] = useState<AddTestRequest["play_method"]>("CrossOver");
   const [translationLayer, setTranslationLayer] = useState<AddTestRequest["translation_layer"]>("D3DMetal");
@@ -898,8 +910,27 @@ function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) 
   const inputCls = "w-full px-2.5 py-2 text-[12px] rounded-lg border border-[#333] bg-[#1a1a1a] text-white placeholder:text-white/50 focus:outline-none focus:border-white/70 transition-colors";
   const labelCls = "block text-[10px] font-medium text-white/80 mb-1 uppercase tracking-wider";
 
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSubmit({
+      status,
+      play_method: playMethod,
+      translation_layer: translationLayer,
+      macos_version: macos || undefined,
+      hardware: [hardware, ram].filter(Boolean).join(" ") || undefined,
+      wine_version: wine || undefined,
+      crossover_version: crossover || undefined,
+      gptk_version: gptkVer || undefined,
+      launcher: launcher || undefined,
+      graphics_preset: preset || undefined,
+      resolution: resolution || undefined,
+      fps: fps || undefined,
+      notes: notes || undefined,
+    });
+  };
+
   return (
-    <div className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div>
           <label className={labelCls}>Run Method</label>
@@ -912,7 +943,7 @@ function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) 
         <div>
           <label className={labelCls}>D3D Layer</label>
           <select value={translationLayer} onChange={(e) => setTranslationLayer(e.target.value as AddTestRequest["translation_layer"])} className={inputCls}>
-            {["D3DMetal", "DXVK", "None"].map((layer) => (
+            {["D3DMetal", "DXVK", "DXMT", "None"].map((layer) => (
               <option key={layer} value={layer}>{layer}</option>
             ))}
           </select>
@@ -990,19 +1021,16 @@ function AddTestForm({ onSubmit }: { onSubmit: (req: AddTestRequest) => void }) 
         <label className={labelCls}>Notes</label>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={`${inputCls} resize-none`} placeholder="Performance notes, workarounds, issues..." />
       </div>
+      {errorMessage && (
+        <p className="text-[12px] text-red-300">{errorMessage}</p>
+      )}
       <button
-        onClick={() => onSubmit({
-          status, play_method: playMethod, translation_layer: translationLayer,
-          macos_version: macos || undefined, hardware: [hardware, ram].filter(Boolean).join(" ") || undefined,
-          wine_version: wine || undefined, crossover_version: crossover || undefined,
-          gptk_version: gptkVer || undefined, launcher: launcher || undefined,
-          graphics_preset: preset || undefined, resolution: resolution || undefined,
-          fps: fps || undefined, notes: notes || undefined,
-        })}
-        className="w-full mt-4 px-4 py-2.5 text-[13px] font-medium rounded-lg bg-white text-black hover:bg-white/90 transition-all"
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full mt-4 px-4 py-2.5 text-[13px] font-medium rounded-lg bg-white text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60 transition-all"
       >
-        Submit Report
+        {isSubmitting ? "Submitting..." : "Submit Report"}
       </button>
-    </div>
+    </form>
   );
 }

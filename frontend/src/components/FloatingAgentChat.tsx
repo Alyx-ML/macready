@@ -39,6 +39,10 @@ interface FloatingAgentChatProps {
   onFileChange?: () => void;
 }
 
+const finderGuyIdleStrip = `${import.meta.env.BASE_URL}imgs/finder-guy-idle.png`;
+const finderGuyWaitingStrip = `${import.meta.env.BASE_URL}imgs/finder-guy-waiting.png`;
+const finderGuyWaveStrip = `${import.meta.env.BASE_URL}imgs/finder-guy-wave.png`;
+
 function storageKey(mode: string, dashboard: string): string {
   return mode === "gamedb" ? "dac-gamedb-agent-" : "dac-agent-" + dashboard;
 }
@@ -77,8 +81,10 @@ export function FloatingAgentChat({ mode = "dashboard", dashboardName = "__creat
   const [sessionId, setSessionId] = useState<string | null>(persisted.current?.sessionId ?? null);
   const [error, setError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isFinderGuyWaving, setIsFinderGuyWaving] = useState(false);
 
   const sendTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finderGuyWaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -104,11 +110,18 @@ export function FloatingAgentChat({ mode = "dashboard", dashboardName = "__creat
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 100);
-  }, []);
+    if (!isCollapsed) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isCollapsed]);
 
   useEffect(() => {
-    return () => { eventSourceRef.current?.close(); };
+    return () => {
+      eventSourceRef.current?.close();
+      if (finderGuyWaveTimeoutRef.current) {
+        clearTimeout(finderGuyWaveTimeoutRef.current);
+      }
+    };
   }, []);
 
   const sseConnectedRef = useRef(false);
@@ -250,32 +263,57 @@ export function FloatingAgentChat({ mode = "dashboard", dashboardName = "__creat
     }
   };
 
+  const handleFinderGuyClick = () => {
+    setIsCollapsed(false);
+    setIsFinderGuyWaving(true);
+    if (finderGuyWaveTimeoutRef.current) {
+      clearTimeout(finderGuyWaveTimeoutRef.current);
+    }
+    finderGuyWaveTimeoutRef.current = setTimeout(() => {
+      setIsFinderGuyWaving(false);
+      finderGuyWaveTimeoutRef.current = null;
+    }, 1200);
+  };
+
+  const finderGuyStrip = isStreaming ? finderGuyWaitingStrip : isFinderGuyWaving ? finderGuyWaveStrip : finderGuyIdleStrip;
+  const finderGuyFrameClass = isFinderGuyWaving && !isStreaming ? "finder-guy-wave-sprite--four-frame" : "";
+  const finderGuyMood = isStreaming ? "waiting" : "idle";
+
   return (
-    <div className="safe-inline safe-bottom-pad fixed bottom-0 left-0 right-0 z-50">
-      <div className="max-w-[860px] mx-auto px-3 sm:px-6 pb-3 sm:pb-4 relative transition-all duration-300 ease-out" style={{ height: isCollapsed ? 28 : "var(--agent-chat-expanded-height)" }}>
-        {/* Collapsed bar */}
-        <div className={`absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out ${isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-          <div className="relative h-7 w-full overflow-hidden rounded-t-lg border border-white/18 bg-[#080808]/92 shadow-[0_12px_32px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.16)]">
-            <button
-              onClick={() => setIsCollapsed(false)}
-              className="relative z-10 flex h-7 w-full items-center justify-center rounded-t-lg bg-transparent transition-colors"
-              title="Expand agent"
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-white/60">
-                <path d="M4 12L12 12" />
-                <path d="M4 9L8 5L12 9" />
-              </svg>
-            </button>
-          </div>
+    <div className="safe-bottom-pad pointer-events-none fixed inset-x-0 bottom-0 z-50">
+      <div className="relative h-[min(520px,calc(100svh-var(--safe-top)-16px))]">
+        <div className={`pointer-events-auto absolute bottom-5 right-4 transition-all duration-300 ease-out sm:right-6 ${isCollapsed ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'}`}>
+          <button
+            type="button"
+            onClick={handleFinderGuyClick}
+            className="finder-guy-launch-button group relative flex h-10 w-10 items-center justify-center rounded-full outline-none transition-transform duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-white/60"
+            title="Open Finder Guy"
+            aria-label="Open Finder Guy assistant"
+          >
+            <span className="finder-guy-launch-chevron" aria-hidden="true" />
+          </button>
         </div>
 
-        {/* Panel */}
-        <div className={`absolute bottom-0 left-0 right-0 transition-all duration-300 ease-out ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <div className="relative h-[var(--agent-chat-expanded-height)] overflow-hidden rounded-t-lg border border-white/14 bg-[#080808]/94 shadow-[0_18px_54px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.14)]">
+        <div className={`pointer-events-auto absolute bottom-5 right-3 w-[min(calc(100vw-1.5rem),430px)] transition-all duration-300 ease-out sm:right-6 ${isCollapsed ? 'translate-x-8 translate-y-8 opacity-0 pointer-events-none' : 'translate-x-0 translate-y-0 opacity-100'}`}>
+          <button
+            type="button"
+            onClick={handleFinderGuyClick}
+            className="finder-guy-chat-pet absolute -top-[74px] right-8 h-[96px] w-[96px] overflow-visible rounded-full outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            aria-label="Finder Guy is ready"
+            tabIndex={-1}
+          >
+            <span className="absolute bottom-0 left-1/2 h-7 w-16 -translate-x-1/2 rounded-full bg-black/45 blur-md" />
+            <span className={`finder-guy-wave-sprite finder-guy-wave-sprite--${finderGuyMood} ${finderGuyFrameClass} relative h-[96px] w-[96px]`} style={{ ["--finder-guy-wave" as string]: `url("${finderGuyStrip}")` }} />
+          </button>
+
+          <div className="relative h-[min(var(--agent-chat-expanded-height),calc(100svh-var(--safe-top)-132px))] overflow-hidden rounded-2xl border border-white/14 bg-[#080808]/94 shadow-[0_18px_54px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.14)]">
           <div className="relative z-10 flex h-full flex-col overflow-hidden">
             {/* Header */}
             <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-white/12">
-              <div />
+              <div className="flex items-center gap-2">
+                <span className="finder-guy-wave-sprite finder-guy-wave-sprite--header h-8 w-8" style={{ ["--finder-guy-wave" as string]: `url("${finderGuyIdleStrip}")` }} />
+                <span className="text-[12px] text-white/72">Finder Guy</span>
+              </div>
               <div className="flex items-center gap-1">
                 {messages.length > 0 && (
                   <button

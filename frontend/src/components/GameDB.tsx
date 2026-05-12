@@ -1196,8 +1196,6 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
   const articlePool = activeArticles.slice(4);
   const articleList = articlePool.slice(0, visibleArticleCount);
   const latestAcrossSources = newsItems.slice(0, 8);
-  const compactPageHeight = (activeCategory === "App Store" || activeCategory === "Performance") && !selectedArticle;
-
   const formatDate = (value?: string) => {
     if (!value) return "";
     return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(value));
@@ -1225,7 +1223,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
   };
 
   return (
-    <main id="macready-news" className={["animate-in pb-16", compactPageHeight ? "" : "min-h-[1580px]"].join(" ")}>
+    <main id="macready-news" className="animate-in pb-8">
       <div className="mx-auto max-w-[1420px] px-4 sm:px-6">
         <header className="flex justify-center pt-2 pb-7">
           <nav
@@ -1284,7 +1282,11 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
           >
         {selectedArticle ? (
-          <ArticleReader article={selectedArticle} onBack={closeArticle} formatDate={formatDate} />
+          <ArticleReader
+            article={selectedArticle}
+            onBack={closeArticle}
+            formatDate={formatDate}
+          />
         ) : newsItems.length === 0 ? (
           <section className="flex min-h-[260px] items-center justify-center rounded-[18px] bg-white/[0.025] text-center">
             <div>
@@ -1335,7 +1337,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                       loading="eager"
                       decoding="async"
                       fetchPriority="high"
-                      className="aspect-[16/9] max-h-[310px] w-full rounded-[16px] object-cover opacity-[0.88] transition-opacity duration-300 group-hover:opacity-100"
+                      className="aspect-[16/9] max-h-[310px] w-full rounded-[16px] object-cover"
                     />
                   )}
                   <div className="pt-0.5">
@@ -1356,33 +1358,32 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
               )}
 
               <aside className="hidden pt-1 xl:block">
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-3 flex items-center justify-between">
                   <p className="text-[10px] uppercase tracking-[0.24em] text-white/55">Top stories</p>
                 </div>
-                <div className="grid gap-3.5">
+                <div className="grid gap-2.5">
                   {topStories.map((article) => (
                     <button
                       key={article.id}
                       type="button"
                       onClick={() => openArticle(article)}
-                      className="group grid grid-cols-[96px_minmax(0,1fr)] items-start gap-3.5 text-left"
+                      className="group grid grid-cols-[86px_minmax(0,1fr)] items-start gap-3 text-left"
                     >
                       {article.image_url && (
                         <img
                           src={getSizedImageUrl(article.image_url, 160)}
                           srcSet={getImageSrcSet(article.image_url, [128, 160, 240])}
-                          sizes="96px"
+                          sizes="86px"
                           alt=""
                           loading="lazy"
                           decoding="async"
-                          className="aspect-[16/10] h-[60px] w-full rounded-[10px] object-cover opacity-[0.76] transition-opacity duration-300 group-hover:opacity-100"
+                          className="aspect-[16/10] h-[52px] w-full rounded-[10px] object-cover"
                         />
                       )}
                       <div className="min-w-0">
                         <p className="text-[9px] uppercase tracking-[0.2em] text-white/58">{article.source}</p>
                         <h3 className="mt-1 line-clamp-2 text-[15px] font-medium leading-snug text-white/90 group-hover:text-white">{article.category === "App Store" ? getAppStoreName(article) : article.title}</h3>
-                        {article.summary && <p className="mt-1 line-clamp-1 text-[12px] leading-5 text-white/66">{article.summary}</p>}
-                        <span className="mt-2 inline-flex h-6 items-center rounded-full bg-white/[0.045] px-2.5 text-[11px] font-medium text-white/60 ring-1 ring-white/[0.045] transition-colors group-hover:bg-white/[0.08] group-hover:text-white/76">
+                        <span className="mt-1.5 inline-flex h-5 items-center rounded-full bg-white/[0.045] px-2 text-[10px] font-medium text-white/60 ring-1 ring-white/[0.045] transition-colors group-hover:bg-white/[0.08] group-hover:text-white/76">
                           Read more
                         </span>
                       </div>
@@ -1392,7 +1393,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
               </aside>
             </section>
 
-            <section className={["content-visibility-auto mt-12 grid gap-12", activeCategory === "News" ? "xl:grid-cols-[minmax(0,1fr)_330px]" : ""].join(" ")}>
+            <section className={["content-visibility-auto mt-5 grid gap-10", activeCategory === "News" ? "xl:grid-cols-[minmax(0,1fr)_330px]" : ""].join(" ")}>
               <div>
                 <div className="mb-5 flex items-end justify-between">
                   <h2 className="text-[22px] font-semibold tracking-tight text-white">{NEWS_CATEGORY_LABELS[activeCategory]}</h2>
@@ -1408,7 +1409,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                       }
                     }}
                   >
-                    <div className="grid gap-x-7 gap-y-9 pb-24 md:grid-cols-2 2xl:grid-cols-3">
+                    <div className="grid gap-x-7 gap-y-9 pb-10 md:grid-cols-2 2xl:grid-cols-3">
                       {articleList.map((article) => (
                         <button
                           key={article.id}
@@ -1424,7 +1425,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                               alt=""
                               loading="lazy"
                               decoding="async"
-                              className="aspect-[16/9] h-auto max-h-[255px] w-full rounded-[14px] object-cover opacity-[0.78] transition-opacity duration-300 group-hover:opacity-100"
+                              className="aspect-[16/9] h-auto max-h-[255px] w-full rounded-[14px] object-cover"
                             />
                           )}
                           <div className="min-w-0 pt-4">
@@ -1438,7 +1439,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                       ))}
                     </div>
                   </ScrollShadow>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-28 bg-gradient-to-t from-black via-black/80 to-transparent" />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-14 bg-gradient-to-t from-black via-black/72 to-transparent" />
                 </div>
               </div>
 
@@ -1458,7 +1459,7 @@ function HomeEditorialPage({ newsItems, isLoading, onOpenCompatibility }: { news
                           >
                             <span className="flex size-[42px] items-center justify-center overflow-hidden rounded-[10px] bg-white/[0.045] text-white/46 ring-1 ring-white/[0.055]">
                               {article.image_url ? (
-                                <img src={getSizedImageUrl(article.image_url, 64)} srcSet={getImageSrcSet(article.image_url, [64, 96, 128])} sizes="42px" alt="" loading="lazy" decoding="async" className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100" />
+                                <img src={getSizedImageUrl(article.image_url, 64)} srcSet={getImageSrcSet(article.image_url, [64, 96, 128])} sizes="42px" alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                               ) : Icon ? (
                                 <Icon className="size-4" strokeWidth={1.75} />
                               ) : null}
@@ -1554,7 +1555,7 @@ function MacOSUpdatesFeed({
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  className="mb-3 aspect-[16/9] w-full rounded-[12px] object-cover opacity-[0.76] transition-opacity duration-300 group-hover:opacity-100"
+                  className="mb-3 aspect-[16/9] w-full rounded-[12px] object-cover"
                 />
               )}
               <p className="text-[9px] uppercase tracking-[0.2em] text-white/52">
@@ -1613,7 +1614,7 @@ function CrossoverUpdatesFeed({
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  className="aspect-[16/10] h-full min-h-[92px] w-full rounded-[12px] object-cover opacity-[0.76] transition-opacity duration-300 group-hover:opacity-100 xl:mb-3 xl:h-auto xl:min-h-0"
+                  className="aspect-[16/10] h-full min-h-[92px] w-full rounded-[12px] object-cover xl:mb-3 xl:h-auto xl:min-h-0"
                 />
                 <span className="min-w-0">
                   <span className="block text-[9px] uppercase tracking-[0.2em] text-white/52">
@@ -1878,19 +1879,21 @@ function ArticleReader({
   }
 
   return (
-    <article className="mx-auto max-w-[1120px] pb-14">
+    <article className="mx-auto max-w-[1120px] pb-8">
       <button type="button" onClick={onBack} className="mb-6 text-[13px] text-white/44 transition-colors hover:text-white">
         ← Back to {categoryLabel}
       </button>
 
-      <section className="grid items-start gap-7 md:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)]">
-        {article.image_url && (
-          <img
-            src={article.image_url}
-            alt=""
-            className="aspect-[16/10] w-full rounded-[22px] object-cover opacity-[0.86] md:sticky md:top-16"
-          />
-        )}
+      <section className="grid items-start gap-8 lg:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.08fr)]">
+        <div>
+          {article.image_url && (
+            <img
+              src={article.image_url}
+              alt=""
+              className="aspect-[16/10] max-h-[360px] w-full rounded-[22px] object-cover"
+            />
+          )}
+        </div>
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-[0.24em] text-white/44">
             {categoryLabel} · {article.source} {formatDate(article.published_at) && `· ${formatDate(article.published_at)}`}
@@ -1914,12 +1917,16 @@ function ArticleReader({
 }
 
 function ArticleBodyScroll({ paragraphs, compact = false }: { paragraphs: string[]; compact?: boolean }) {
+  const isShortBody = !compact && paragraphs.length <= 4;
+
   return (
     <div className={compact ? "relative mt-4" : "relative mt-6"}>
       <div
         className={compact
           ? "release-notes-scroll max-h-[180px] overflow-y-auto rounded-[20px] bg-black/[0.34] px-5 py-4 md:px-7 md:py-5"
-          : "release-notes-scroll max-h-[min(620px,calc(100vh-180px))] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8"}
+          : isShortBody
+            ? "rounded-[22px] bg-black/[0.26] px-5 py-5 md:px-7 md:py-6"
+            : "release-notes-scroll max-h-[min(620px,calc(100vh-180px))] overflow-y-auto rounded-[24px] bg-black/[0.34] px-5 py-6 md:px-8 md:py-8"}
         style={{
           WebkitOverflowScrolling: "touch",
           overscrollBehavior: "contain",
@@ -1941,8 +1948,12 @@ function ArticleBodyScroll({ paragraphs, compact = false }: { paragraphs: string
       </div>
       {!compact && (
         <>
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-[24px] bg-gradient-to-b from-[#030303] via-[#030303]/70 to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[24px] bg-gradient-to-t from-[#030303] via-[#030303]/70 to-transparent" />
+          {!isShortBody && (
+            <>
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-14 rounded-t-[24px] bg-gradient-to-b from-[#030303] via-[#030303]/70 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[24px] bg-gradient-to-t from-[#030303] via-[#030303]/70 to-transparent" />
+            </>
+          )}
         </>
       )}
     </div>
@@ -3228,8 +3239,8 @@ function FooterLogo() {
 
 function FooterChevron() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="opacity-80">
+      <path d="M6.6 4.25 10.1 8l-3.5 3.75" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
